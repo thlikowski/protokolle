@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WEG Import</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0f1117;
+    --panel:    #161b27;
+    --border:   #252d3d;
+    --accent:   #3b82f6;
+    --accent2:  #10b981;
+    --warn:     #f59e0b;
+    --red:      #ef4444;
+    --text:     #e2e8f0;
+    --muted:    #64748b;
+    --input-bg: #1e2535;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 20px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  header h1 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: .05em;
+  }
+  .hdr-sep { color: var(--border); }
+  .proto-select-wrap {
+    display: flex; align-items: center; gap: 8px; flex: 1;
+  }
+  select, input {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 13px;
+  }
+  select:focus, input:focus { outline: none; border-color: var(--accent); }
+  .btn {
+    padding: 6px 14px; border-radius: 4px; border: none;
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+    cursor: pointer; transition: opacity .15s;
+  }
+  .btn:hover { opacity: .85; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-success { background: var(--accent2); color: #fff; }
+  .btn-warn    { background: var(--warn); color: #000; }
+  .btn-danger  { background: var(--red); color: #fff; }
+  .btn-ghost   { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+
+  /* ── Main layout: PDF | Form | List ── */
+  main {
+    display: grid;
+    grid-template-columns: 1fr 380px 320px;
+    flex: 1;
+    overflow: hidden;
+    gap: 0;
+  }
+
+  /* ── PDF Viewer ── */
+  #pdf-panel {
+    background: #1a1a2e;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #pdf-panel .panel-hdr {
+    padding: 8px 14px;
+    font-size: 11px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+    flex-shrink: 0;
+  }
+  #pdf-frame {
+    flex: 1;
+    border: none;
+    width: 100%;
+  }
+  #pdf-drop {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--muted);
+    font-size: 13px;
+    cursor: pointer;
+    border: 2px dashed var(--border);
+    margin: 20px;
+    border-radius: 8px;
+    transition: border-color .2s;
+  }
+  #pdf-drop:hover { border-color: var(--accent); }
+  #pdf-drop .drop-icon { font-size: 36px; }
+  #pdf-file-input { display: none; }
+
+  /* ── Formular ── */
+  #form-panel {
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .panel-hdr {
+    padding: 8px 14px;
+    font-size: 11px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .form-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .form-scroll::-webkit-scrollbar { width: 4px; }
+  .form-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .field-group {
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .field-group label {
+    font-size: 11px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+  .field-group input,
+  .field-group select,
+  .field-group textarea {
+    width: 100%;
+    font-size: 13px;
+  }
+  .field-group textarea {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 10px;
+    border-radius: 4px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    resize: vertical;
+    min-height: 80px;
+    line-height: 1.5;
+  }
+  .field-group textarea:focus { outline: none; border-color: var(--accent); }
+
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+
+  .section-divider {
+    font-size: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    padding: 4px 0 2px;
+    border-bottom: 1px solid var(--border);
+    margin-top: 4px;
+  }
+
+  .form-actions {
+    padding: 12px 14px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-shrink: 0;
+    background: var(--panel);
+  }
+  #save-feedback {
+    font-size: 12px;
+    color: var(--accent2);
+    font-family: 'IBM Plex Mono', monospace;
+    opacity: 0;
+    transition: opacity .3s;
+    flex: 1;
+    text-align: right;
+  }
+
+  /* ── Beschluss-Liste ── */
+  #list-panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #beschluss-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+  }
+  #beschluss-list::-webkit-scrollbar { width: 4px; }
+  #beschluss-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .beschluss-card {
+    padding: 10px 12px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+    background: var(--panel);
+  }
+  .beschluss-card:hover { border-color: var(--accent); }
+  .beschluss-card.selected { border-color: var(--accent); background: #1e2d47; }
+  .bc-top {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    margin-bottom: 3px;
+  }
+  .bc-titel {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 4px;
+    line-height: 1.4;
+  }
+  .bc-meta {
+    font-size: 11px;
+    color: var(--muted);
+    display: flex; gap: 8px; align-items: center;
+  }
+  .bc-ergebnis {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .bc-ergebnis.ang { background: #064e3b; color: #6ee7b7; }
+  .bc-ergebnis.abg { background: #450a0a; color: #fca5a5; }
+
+  .empty-list {
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    padding: 30px 10px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* ── Protokoll-Modal ── */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.7);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    width: 420px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .modal h2 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    color: var(--accent);
+  }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+  /* ── Status-Bar ── */
+  #status-bar {
+    padding: 5px 16px;
+    font-size: 11px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--muted);
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+    display: flex; gap: 20px; align-items: center;
+  }
+  #status-bar span { display: flex; align-items: center; gap: 5px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
+  .dot.ok { background: var(--accent2); }
+  .dot.err { background: var(--red); }
+  /* Modi: list / new / edit */
+  #form-panel { position: relative; }
+
+  /* LISTE-Modus: nur +Neu-Button, Formular ausgeblendet */
+  .mode-list  .form-scroll   { display: none; }
+  .mode-list  .form-actions  { display: none; }
+  .mode-list  #btn-new-wrap  { display: flex; }
+
+  /* NEU-Modus */
+  .mode-new   #btn-new-wrap  { display: none; }
+  .mode-new   #btn-delete    { display: none; }
+  .mode-new   #btn-save      { background: var(--accent2); }
+  .mode-new   .panel-hdr     { color: var(--accent2); }
+
+  /* BEARBEITEN-Modus */
+  .mode-edit  #btn-new-wrap  { display: none; }
+  .mode-edit  #btn-delete    { display: inline-block; }
+  .mode-edit  #btn-save      { background: var(--accent); }
+  .mode-edit  .panel-hdr     { background: #2d1f0a; border-bottom-color: var(--warn); }
+  .mode-edit  #form-title    { color: var(--warn); }
+
+  #btn-new-wrap {
+    display: none;
+    padding: 20px 14px;
+    justify-content: center;
+  }
+  #btn-new-wrap .btn {
+    font-size: 13px;
+    padding: 10px 24px;
+  }
+  #edit-indicator { display: none; }
+
+  /* ── Modi ── */
+  /* LISTE: Formular + Actions versteckt, +Neu sichtbar */
+  .mode-list .form-scroll  { display: none; }
+  .mode-list .form-actions { display: none; }
+  .mode-list #btn-new-wrap { display: flex; }
+
+  /* NEU: +Neu weg, Löschen weg, Speichern grün */
+  .mode-new #btn-new-wrap { display: none; }
+  .mode-new #btn-delete   { display: none !important; }
+  .mode-new #btn-save     { background: var(--accent2); }
+  .mode-new .panel-hdr    { color: var(--accent2); }
+
+  /* BEARBEITEN: +Neu weg, Löschen sichtbar, Speichern blau, Header orange */
+  .mode-edit #btn-new-wrap { display: none; }
+  .mode-edit #btn-delete   { display: inline-block !important; }
+  .mode-edit #btn-save     { background: var(--accent); }
+  .mode-edit .panel-hdr    { background: #2d1f0a; border-bottom-color: var(--warn); }
+  .mode-edit #form-title   { color: var(--warn); }
+
+  #btn-new-wrap {
+    display: none;
+    padding: 20px 14px;
+    justify-content: center;
+  }
+  #btn-new-wrap .btn { font-size: 13px; padding: 10px 24px; width: 100%; }
+  #edit-indicator { display: none; }
+
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+  <h1>WEG // IMPORT</h1>
+  <span class="hdr-sep">│</span>
+  <div class="proto-select-wrap">
+    <label style="font-size:11px;color:var(--muted);white-space:nowrap">Protokoll:</label>
+    <select id="proto-select" style="flex:1;max-width:340px" onchange="onProtoSelect()">
+      <option value="">– Protokoll wählen –</option>
+    </select>
+    <button class="btn btn-ghost" onclick="openNewProtoModal()">+ Neu</button>
+  </div>
+  <span class="hdr-sep">│</span>
+  <span style="font-size:11px;color:var(--muted)" id="proto-info">–</span>
+</header>
+
+<!-- ── Main ── -->
+<main>
+
+  <!-- PDF -->
+  <div id="pdf-panel">
+    <div class="panel-hdr">
+      <span>📄 PDF</span>
+      <button class="btn btn-ghost" style="padding:2px 8px;font-size:11px" onclick="document.getElementById('pdf-file-input').click()">Laden</button>
+    </div>
+    <input type="file" id="pdf-file-input" accept=".pdf" onchange="loadPDF(this)">
+    <div id="pdf-drop" onclick="document.getElementById('pdf-file-input').click()">
+      <div class="drop-icon">📂</div>
+      <div>PDF hier ablegen oder klicken</div>
+      <div style="font-size:11px">Protokoll zur Eingabe öffnen</div>
+    </div>
+    <iframe id="pdf-frame" style="display:none"></iframe>
+  </div>
+
+  <!-- Formular -->
+  <div id="form-panel" class="mode-list">
+    <div class="panel-hdr">
+      <span id="form-title">BESCHLUSS EINGEBEN</span>
+      <span id="edit-indicator" style="color:var(--warn);display:none">✎ Bearbeitung</span>
+    </div>
+    <div class="form-scroll">
+
+      <div class="section-divider">TOP</div>
+      <div class="row2">
+        <div class="field-group">
+          <label>TOP-Nummer</label>
+          <input id="f-top" type="text" placeholder="z.B. 1.b, 3, 7.a">
+        </div>
+        <div class="field-group">
+          <label>Seite</label>
+          <input id="f-seite" type="number" placeholder="1" min="1">
+        </div>
+      </div>
+      <div class="field-group">
+        <label>TOP-Titel</label>
+        <input id="f-titel" type="text" placeholder="Kurztitel des Tagesordnungspunktes">
+      </div>
+
+      <div class="section-divider">BESCHLUSSTEXT</div>
+      <div class="field-group">
+        <label>Beschlusstext</label>
+        <textarea id="f-text" rows="5" placeholder="Vollständiger Beschlusstext aus dem Protokoll..."></textarea>
+      </div>
+
+      <div class="section-divider">ABSTIMMUNG</div>
+      <div class="row3">
+        <div class="field-group">
+          <label>JA-Stimmen</label>
+          <input id="f-ja" type="text" placeholder="z.B. 21">
+        </div>
+        <div class="field-group">
+          <label>NEIN-Stimmen</label>
+          <input id="f-nein" type="text" placeholder="–">
+        </div>
+        <div class="field-group">
+          <label>Enthaltungen</label>
+          <input id="f-enth" type="text" placeholder="–">
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Ergebnis</label>
+        <select id="f-ergebnis">
+          <option value="angenommen">✓ angenommen</option>
+          <option value="abgelehnt">✗ abgelehnt</option>
+          <option value="">– unbekannt</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Beirat-relevant?</label>
+        <select id="f-beirat">
+          <option value="0">Nein</option>
+          <option value="1">Ja – Beirat beteiligt</option>
+        </select>
+      </div>
+
+    </div>
+    <!-- +Neu Button (nur im LISTE-Modus) -->
+    <div id="btn-new-wrap">
+      <button class="btn btn-success" style="width:100%" onclick="setMode('new')">＋ Neuer Beschluss</button>
+    </div>
+
+    <!-- Formular-Aktionen (NEU + BEARBEITEN) -->
+    <div class="form-actions">
+      <button class="btn btn-danger"  id="btn-delete"  onclick="deleteBeschluss()">🗑 Löschen</button>
+      <button class="btn btn-ghost"   id="btn-cancel"  onclick="setMode('list')">✕ Abbrechen</button>
+      <button class="btn btn-success" id="btn-save"    onclick="saveBeschluss()">💾 Speichern</button>
+      <span id="save-feedback"></span>
+    </div>
+  </div>
+
+  <!-- Liste -->
+  <div id="list-panel">
+    <div class="panel-hdr">
+      <span>BESCHLÜSSE</span>
+      <span id="list-count" style="color:var(--accent);font-size:12px">0</span>
+    </div>
+    <div id="beschluss-list">
+      <div class="empty-list">Protokoll wählen<br>um Beschlüsse zu sehen</div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ── Status-Bar ── -->
+<div id="status-bar">
+  <span><span class="dot" id="srv-dot"></span> <span id="srv-status">Verbinde...</span></span>
+  <span id="status-proto" style="color:var(--muted)"></span>
+  <span id="status-count" style="color:var(--muted)"></span>
+</div>
+
+<!-- ── Neues Protokoll Modal ── -->
+<div class="modal-overlay" id="proto-modal">
+  <div class="modal">
+    <h2>Neues Protokoll anlegen</h2>
+    <div class="field-group">
+      <label>WEG-Objekt</label>
+      <select id="m-objekt" onchange="onObjektChange()">
+        <option value="">– wählen –</option>
+        <option value="Am Frauentor">Am Frauentor</option>
+        <option value="Dr.-Külz-Straße">Dr.-Külz-Straße</option>
+        <option value="Mariental">Mariental</option>
+        <option value="Rosengarten">Rosengarten</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label>Hausverwaltung</label>
+      <input id="m-hv" type="text" placeholder="wird automatisch gesetzt">
+    </div>
+    <div class="field-group">
+      <label>Versammlungsdatum (YYYY-MM-DD)</label>
+      <input id="m-datum" type="text" placeholder="2017-10-19">
+    </div>
+    <div class="field-group">
+      <label>Dateiname (PDF)</label>
+      <input id="m-dateiname" type="text" placeholder="Frauentor_2017-10-19_durchsuchbar.pdf">
+    </div>
+    <div class="field-group">
+      <label>Ort</label>
+      <input id="m-ort" type="text" placeholder="Eisenach">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveProtokoll()">Anlegen</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Config & State ───────────────────────────────────────────────────────────
+const API = 'http://localhost:8765';
+const HV_MAP = {
+  'Am Frauentor':    'La Casa Hausverwaltung GmbH',
+  'Dr.-Külz-Straße': 'MM-Consult',
+  'Mariental':       'Bernhardt / La Casa Hausverwaltung GmbH',
+  'Rosengarten':     'MM-Consult',
+};
+let currentProtoId   = null;
+let currentBeschluss = null;
+let beschluesse      = [];
+
+// ── Modi: list / new / edit ───────────────────────────────────────────────────
+function setMode(mode) {
+  const fp = document.getElementById('form-panel');
+  fp.classList.remove('mode-list', 'mode-new', 'mode-edit');
+  fp.classList.add('mode-' + mode);
+  document.getElementById('save-feedback').textContent = '';
+
+  if (mode === 'list') {
+    currentBeschluss = null;
+    clearFields();
+    document.getElementById('form-title').textContent = 'BESCHLÜSSE';
+    renderList();
+  } else if (mode === 'new') {
+    currentBeschluss = null;
+    clearFields();
+    document.getElementById('form-title').textContent = 'NEUER BESCHLUSS';
+    renderList();
+    document.getElementById('f-top').focus();
+  }
+}
+
+function clearFields() {
+  ['f-top','f-titel','f-text','f-ja','f-nein','f-enth','f-seite'].forEach(
+    id => document.getElementById(id).value = '');
+  document.getElementById('f-ergebnis').value = 'angenommen';
+  document.getElementById('f-beirat').value   = '0';
+}
+
+// ── Server-Check ──────────────────────────────────────────────────────────────
+async function checkServer() {
+  try {
+    await fetch(`${API}/api/data`, { signal: AbortSignal.timeout(2000) });
+    document.getElementById('srv-dot').className      = 'dot ok';
+    document.getElementById('srv-status').textContent = 'Server verbunden';
+    await loadProtokolle();   // await damit initFromURL() danach Select-Options hat
+  } catch(e) {
+    document.getElementById('srv-dot').className      = 'dot err';
+    document.getElementById('srv-status').textContent = 'Server nicht erreichbar – python3 weg_server.py starten';
+    setTimeout(checkServer, 3000);
+    throw e;   // damit initFromURL() den Fehler merkt
+  }
+}
+
+// ── Protokolle laden ──────────────────────────────────────────────────────────
+async function loadProtokolle() {
+  const r = await fetch(`${API}/api/data`);
+  const d = await r.json();
+  const sel = document.getElementById('proto-select');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">– Protokoll wählen –</option>';
+  d.protokolle
+    .sort((a,b) => (a.weg_objekt+a.versammlungs_datum).localeCompare(b.weg_objekt+b.versammlungs_datum))
+    .forEach(p => {
+      const o = document.createElement('option');
+      o.value = p.id;
+      o.textContent = `${p.weg_objekt} · ${p.versammlungs_datum}`;
+      sel.appendChild(o);
+    });
+  if (cur) sel.value = cur;
+  if (currentProtoId) loadBeschluesse();
+}
+
+// ── Protokoll wählen ──────────────────────────────────────────────────────────
+async function onProtoSelect() {
+  currentProtoId = document.getElementById('proto-select').value || null;
+  beschluesse = [];
+  setMode('list');
+  if (!currentProtoId) {
+    document.getElementById('proto-info').textContent = '–';
+    return;
+  }
+  const r = await fetch(`${API}/api/data`);
+  const d = await r.json();
+  const p = d.protokolle.find(x => x.id == currentProtoId);
+  if (p) {
+    document.getElementById('proto-info').textContent =
+      `${p.weg_objekt} · ${p.versammlungs_datum} · ${p.hausverwaltung.replace(' Hausverwaltung GmbH','').replace(' / La Casa','')}`;
+    document.getElementById('status-proto').textContent = p.dateiname;
+  }
+  loadBeschluesse();
+}
+
+async function loadBeschluesse() {
+  if (!currentProtoId) return;
+  const r = await fetch(`${API}/api/data`);
+  const d = await r.json();
+  beschluesse = d.beschluesse.filter(b => b.protokoll_id == currentProtoId);
+  renderList();
+  document.getElementById('status-count').textContent = `${beschluesse.length} Beschlüsse`;
+  document.getElementById('list-count').textContent   = beschluesse.length;
+}
+
+// ── Liste rendern ─────────────────────────────────────────────────────────────
+function renderList() {
+  const c = document.getElementById('beschluss-list');
+  if (!beschluesse.length) {
+    c.innerHTML = '<div class="empty-list">Noch keine Beschlüsse<br>→ „Neuer Beschluss" klicken</div>';
+    return;
+  }
+  const sortTop = s => {
+    // Formate: "1", "2.a", "10.1", "10.2", "4.1.a" etc.
+    const parts = String(s).split('.');
+    let score = 0;
+    let factor = 1;
+    for (const p of parts) {
+      const n = parseInt(p);
+      if (!isNaN(n)) {
+        score += n * factor;
+      } else {
+        // Buchstabe: a=1, b=2 ...
+        score += (p.toLowerCase().charCodeAt(0) - 96) * factor;
+      }
+      factor /= 1000;
+    }
+    return score;
+  };
+  c.innerHTML = [...beschluesse]
+    .sort((a,b) => sortTop(a.top_nr) - sortTop(b.top_nr))
+    .map(b => {
+      const erg = b.ergebnis || '';
+      const cls = erg.includes('angenommen') ? 'ang' : erg.includes('abgelehnt') ? 'abg' : '';
+      const sel = currentBeschluss == b.id ? ' selected' : '';
+      return `<div class="beschluss-card${sel}" onclick="loadBeschluss(${b.id})">
+        <div class="bc-top">TOP ${b.top_nr}${b.seite ? ' · S.'+b.seite : ''}</div>
+        <div class="bc-titel">${b.top_titel || (b.beschluss_text||'').substring(0,60) || '(kein Titel)'}</div>
+        <div class="bc-meta">
+          <span>JA: ${b.ja_stimmen || '–'}</span>
+          ${b.enthaltungen ? `<span>Enth: ${b.enthaltungen}</span>` : ''}
+          ${erg ? `<span class="bc-ergebnis ${cls}">${erg}</span>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+}
+
+// ── Beschluss laden → Edit-Modus ──────────────────────────────────────────────
+function loadBeschluss(id) {
+  const b = beschluesse.find(x => x.id === id);
+  if (!b) return;
+  currentBeschluss = id;
+  document.getElementById('f-top').value      = b.top_nr    || '';
+  document.getElementById('f-titel').value    = b.top_titel || '';
+  document.getElementById('f-text').value     = b.beschluss_text || '';
+  document.getElementById('f-ja').value       = b.ja_stimmen    || '';
+  document.getElementById('f-nein').value     = b.nein_stimmen  || '';
+  document.getElementById('f-enth').value     = b.enthaltungen  || '';
+  document.getElementById('f-ergebnis').value = b.ergebnis      || 'angenommen';
+  document.getElementById('f-beirat').value   = b.beirat_relevant ? '1' : '0';
+  document.getElementById('f-seite').value    = (b.seite != null) ? b.seite : '';
+  const fp = document.getElementById('form-panel');
+  fp.classList.remove('mode-list', 'mode-new', 'mode-edit');
+  fp.classList.add('mode-edit');
+  document.getElementById('form-title').textContent = `BEARBEITEN · TOP ${b.top_nr}`;
+  document.getElementById('save-feedback').textContent = '';
+  renderList();
+}
+
+// ── Speichern ─────────────────────────────────────────────────────────────────
+async function saveBeschluss() {
+  if (!currentProtoId) { alert('Bitte zuerst ein Protokoll wählen.'); return; }
+  const top = document.getElementById('f-top').value.trim();
+  if (!top) { alert('TOP-Nummer ist Pflicht.'); return; }
+
+  const payload = {
+    protokoll_id:    parseInt(currentProtoId),
+    top_nr:          top,
+    top_titel:       document.getElementById('f-titel').value.trim(),
+    beschluss_text:  document.getElementById('f-text').value.trim(),
+    ja_stimmen:      document.getElementById('f-ja').value.trim()   || null,
+    nein_stimmen:    document.getElementById('f-nein').value.trim() || null,
+    enthaltungen:    document.getElementById('f-enth').value.trim() || null,
+    ergebnis:        document.getElementById('f-ergebnis').value    || null,
+    beirat_relevant: parseInt(document.getElementById('f-beirat').value),
+    seite:           (() => { const v = document.getElementById('f-seite').value; return v !== '' ? parseInt(v) : null; })(),
+  };
+
+  const wasNew = !currentBeschluss;
+  const url    = wasNew ? `${API}/api/import/beschluss` : `${API}/api/import/beschluss/${currentBeschluss}`;
+  const method = wasNew ? 'POST' : 'PUT';
+
+  try {
+    const r = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    const saved = await r.json();
+
+    await loadBeschluesse();
+
+    if (wasNew) {
+      setMode('list');
+    } else {
+      currentBeschluss = saved.id;
+      loadBeschluss(saved.id);
+      document.getElementById('save-feedback').textContent = `✓ TOP ${saved.top_nr} gespeichert`;
+    }
+  } catch(e) {
+    alert('Fehler beim Speichern: ' + e);
+  }
+}
+
+// ── Löschen ───────────────────────────────────────────────────────────────────
+async function deleteBeschluss() {
+  if (!currentBeschluss) return;
+  const b = beschluesse.find(x => x.id === currentBeschluss);
+  if (!confirm(`TOP ${b?.top_nr || ''} wirklich löschen?`)) return;
+  try {
+    const r = await fetch(`${API}/api/import/beschluss/${currentBeschluss}`, { method: 'DELETE' });
+    if (!r.ok) throw new Error(await r.text());
+    await loadBeschluesse();
+    setMode('list');
+  } catch(e) {
+    alert('Fehler beim Löschen: ' + e);
+  }
+}
+
+// ── PDF laden ─────────────────────────────────────────────────────────────────
+function loadPDF(input) {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('pdf-drop').style.display  = 'none';
+  document.getElementById('pdf-frame').style.display = 'block';
+  document.getElementById('pdf-frame').src = URL.createObjectURL(file);
+}
+
+// ── Protokoll-Modal ───────────────────────────────────────────────────────────
+function openNewProtoModal() { document.getElementById('proto-modal').classList.add('open'); }
+function closeModal()        { document.getElementById('proto-modal').classList.remove('open'); }
+function onObjektChange() {
+  document.getElementById('m-hv').value = HV_MAP[document.getElementById('m-objekt').value] || '';
+}
+
+async function saveProtokoll() {
+  const objekt = document.getElementById('m-objekt').value;
+  const datum  = document.getElementById('m-datum').value.trim();
+  if (!objekt || !datum) { alert('Objekt und Datum sind Pflicht.'); return; }
+  const datei = document.getElementById('m-dateiname').value.trim();
+  const payload = {
+    dateiname:          datei || `${objekt.replace(/[^a-zA-Z]/g,'')}_${datum}.pdf`,
+    pdf_pfad:           `output/${datei || datum+'.pdf'}`,
+    versammlungs_datum: datum,
+    hausverwaltung:     document.getElementById('m-hv').value.trim(),
+    weg_objekt:         objekt,
+    ort:                document.getElementById('m-ort').value.trim(),
+  };
+  try {
+    const r = await fetch(`${API}/api/import/protokoll`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    const saved = await r.json();
+    closeModal();
+    await loadProtokolle();
+    document.getElementById('proto-select').value = saved.id;
+    currentProtoId = saved.id;
+    await onProtoSelect();
+  } catch(e) { alert('Fehler: ' + e); }
+}
+
+// ── Start ─────────────────────────────────────────────────────────────────────
+// ── URL-Parameter auslesen ───────────────────────────────────────────────────
+async function initFromURL() {
+  const params     = new URLSearchParams(window.location.search);
+  const protoParam = params.get('proto');
+  const bParam     = params.get('beschluss');
+
+  // Server-Check ohne loadProtokolle (machen wir selbst)
+  try {
+    await fetch(`${API}/api/data`, { signal: AbortSignal.timeout(2000) });
+    document.getElementById('srv-dot').className      = 'dot ok';
+    document.getElementById('srv-status').textContent = 'Server verbunden';
+  } catch(e) {
+    document.getElementById('srv-dot').className      = 'dot err';
+    document.getElementById('srv-status').textContent = 'Server nicht erreichbar – python3 weg_server.py starten';
+    return;
+  }
+
+  // Alle Daten laden
+  const r = await fetch(`${API}/api/data`);
+  const d = await r.json();
+
+  // Select befüllen
+  const sel = document.getElementById('proto-select');
+  sel.innerHTML = '<option value="">– Protokoll wählen –</option>';
+  d.protokolle
+    .sort((a,b) => (a.weg_objekt+a.versammlungs_datum).localeCompare(b.weg_objekt+b.versammlungs_datum))
+    .forEach(p => {
+      const o = document.createElement('option');
+      o.value = p.id;
+      o.textContent = `${p.weg_objekt} · ${p.versammlungs_datum}`;
+      sel.appendChild(o);
+    });
+
+  if (protoParam) {
+    // Protokoll aus URL vorauswählen
+    const proto = d.protokolle.find(p => p.id == protoParam);
+    if (proto) {
+      sel.value      = proto.id;
+      currentProtoId = String(proto.id);
+
+      // Protokoll-Info anzeigen
+      document.getElementById('proto-info').textContent =
+        `${proto.weg_objekt} · ${proto.versammlungs_datum} · ${proto.hausverwaltung.replace(' Hausverwaltung GmbH','').replace(' / La Casa','')}`;
+      document.getElementById('status-proto').textContent = proto.dateiname;
+
+      // Beschlüsse laden
+      beschluesse = d.beschluesse.filter(b => b.protokoll_id == proto.id);
+      document.getElementById('status-count').textContent = `${beschluesse.length} Beschlüsse`;
+      document.getElementById('list-count').textContent   = beschluesse.length;
+
+      if (bParam) {
+        // Direkt in Edit-Modus
+        const id = parseInt(bParam);
+        const b  = beschluesse.find(b => b.id === id);
+        if (b) {
+          loadBeschluss(id);
+        } else {
+          setMode('list');
+        }
+      } else {
+        setMode('list');
+      }
+    } else {
+      setMode('list');
+    }
+  } else {
+    setMode('list');
+  }
+}
+
+initFromURL();
+</script>
+</body>
+</html>

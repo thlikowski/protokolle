@@ -1,0 +1,5 @@
+*.pdf
+*.db
+Backup/
+input/
+output/

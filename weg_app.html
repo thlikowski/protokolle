@@ -1,0 +1,1811 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WEG Protokolle</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg:        #0f0f0f;
+    --surface:   #1a1a1a;
+    --border:    #2a2a2a;
+    --border2:   #333;
+    --text:      #e0e0e0;
+    --muted:     #666;
+    --accent:    #f0c040;
+    --accent2:   #e07020;
+    --beirat:    #e05050;
+    --green:     #50c070;
+    --blue:      #4090e0;
+    --mono:      'IBM Plex Mono', monospace;
+    --sans:      'IBM Plex Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border2);
+    padding: 0 24px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header h1 {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  header .sep { color: var(--border2); }
+  .stats-bar {
+    display: flex;
+    gap: 16px;
+    margin-left: auto;
+  }
+  .stat {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .stat span { color: var(--text); font-weight: 500; }
+
+  /* ── Layout ── */
+  .app {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    height: calc(100vh - 52px);
+  }
+
+  /* ── Sidebar ── */
+  aside {
+    width: 220px;
+    min-width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 16px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .filter-group {
+    padding: 8px 16px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .filter-group:last-child { border-bottom: none; }
+  .filter-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .filter-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 5px 8px;
+    background: none;
+    border: none;
+    border-radius: 4px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.1s;
+  }
+  .filter-btn:hover { background: var(--border); }
+  .filter-btn.active {
+    background: rgba(240,192,64,0.12);
+    color: var(--accent);
+  }
+  .filter-btn .count {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .filter-btn.active .count { color: var(--accent); }
+
+  /* Beirat-Filter Button speziell */
+  .filter-btn.beirat-btn.active {
+    background: rgba(224,80,80,0.12);
+    color: var(--beirat);
+  }
+  .filter-btn.beirat-btn.active .count { color: var(--beirat); }
+
+  .search-wrap {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .search-wrap input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 6px 10px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .search-wrap input:focus { border-color: var(--accent); }
+  .search-wrap input::placeholder { color: var(--muted); }
+
+  /* Jahr-Filter */
+  .year-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 8px 16px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .year-btn {
+    background: none;
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    padding: 2px 7px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.1s;
+  }
+  .year-btn:hover { border-color: var(--text); color: var(--text); }
+  .year-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #000;
+    font-weight: 500;
+  }
+
+  /* ── Main ── */
+  main {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    padding: 0 20px;
+    gap: 0;
+  }
+  .tab {
+    padding: 12px 18px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab .badge {
+    background: var(--beirat);
+    color: #fff;
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 10px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  /* Result count */
+  .result-bar {
+    padding: 8px 20px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg);
+  }
+  .result-bar .found { color: var(--text); }
+  .clear-btn {
+    margin-left: auto;
+    background: none;
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    padding: 2px 8px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .clear-btn:hover { color: var(--text); border-color: var(--text); }
+
+  /* ── Beschluss-Liste ── */
+  .list-wrap {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+  }
+
+  .beschluss-row {
+    display: grid;
+    grid-template-columns: 90px 100px 50px 1fr 90px 36px 28px;
+    align-items: center;
+    gap: 0;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .beschluss-row:hover { background: var(--surface); }
+  .beschluss-row.selected { background: rgba(240,192,64,0.07); }
+  .beschluss-row.beirat-row { border-left: 3px solid var(--beirat); }
+
+  .col-objekt {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .col-datum {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text);
+  }
+  .col-top {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    font-weight: 500;
+  }
+  .col-text {
+    font-size: 13px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 12px;
+  }
+  .col-ergebnis {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-align: right;
+  }
+  .ergebnis-angenommen { color: var(--green); }
+  .ergebnis-abgelehnt  { color: var(--beirat); }
+  .col-beirat { text-align: center; font-size: 12px; }
+
+  /* List header */
+  .list-header {
+    display: grid;
+    grid-template-columns: 90px 100px 50px 1fr 90px 36px 28px;
+    gap: 0;
+    padding: 6px 20px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border2);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .list-header span {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0 12px;
+  }
+  .list-header span:first-child,
+  .list-header span:nth-child(2),
+  .list-header span:nth-child(3) { padding-left: 0; }
+
+  /* ── Detail-Panel ── */
+  .detail-panel {
+    width: 420px;
+    min-width: 420px;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  .detail-panel.hidden { display: none; }
+  .detail-header {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .detail-header .d-top {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .detail-header .d-meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .detail-header .d-beirat {
+    display: inline-block;
+    margin-top: 8px;
+    background: rgba(224,80,80,0.15);
+    color: var(--beirat);
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    border: 1px solid rgba(224,80,80,0.3);
+  }
+  .detail-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 16px; }
+
+  .d-section-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .d-text {
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--text);
+    background: var(--bg);
+    padding: 12px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+  .abstimmung-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .abstimmung-cell {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    text-align: center;
+  }
+  .abstimmung-cell .a-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .abstimmung-cell .a-val {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .a-ja   { color: var(--green); }
+  .a-nein { color: var(--beirat); }
+  .a-enth { color: var(--muted); }
+
+  /* Kommentar + Status im Detail */
+  .status-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .status-btn {
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 11px;
+    cursor: pointer;
+    border: 1px solid var(--border2);
+    background: none;
+    color: var(--muted);
+    transition: all 0.15s;
+  }
+  .status-btn:hover { border-color: var(--text); color: var(--text); }
+  .status-btn.s-offen.active    { background: rgba(240,192,64,0.15); border-color: var(--accent); color: var(--accent); }
+  .status-btn.s-arbeit.active   { background: rgba(64,144,224,0.15); border-color: var(--blue); color: var(--blue); }
+  .status-btn.s-erledigt.active { background: rgba(80,192,112,0.15); border-color: var(--green); color: var(--green); }
+
+  .kommentar-area {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    line-height: 1.5;
+    resize: vertical;
+    min-height: 80px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .kommentar-area:focus { border-color: var(--accent); }
+  .kommentar-area::placeholder { color: var(--muted); }
+
+  .save-btn {
+    align-self: flex-start;
+    background: var(--accent);
+    border: none;
+    border-radius: 4px;
+    padding: 6px 16px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    color: #000;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .save-btn:hover { opacity: 0.85; }
+  .save-note {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--green);
+    display: none;
+    margin-left: 8px;
+  }
+
+  .pdf-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 7px 14px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text);
+    text-decoration: none;
+    transition: all 0.15s;
+  }
+  .pdf-link:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Protokoll-Tab */
+  .proto-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+    padding: 20px;
+  }
+  .proto-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    transition: border-color 0.15s;
+  }
+  .proto-card:hover { border-color: var(--border2); }
+  .proto-card .pc-objekt {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .proto-card .pc-datum {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .proto-card .pc-hv {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .proto-card .pc-stats {
+    display: flex;
+    gap: 10px;
+  }
+  .proto-card .pc-stat {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .proto-card .pc-stat span { color: var(--text); }
+  .proto-card .pc-beirat-dot {
+    width: 6px; height: 6px;
+    background: var(--beirat);
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+
+  /* Empty state */
+  .empty {
+    padding: 60px 20px;
+    text-align: center;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #444; }
+
+  /* Highlight search */
+  mark {
+    background: rgba(240,192,64,0.3);
+    color: inherit;
+    border-radius: 2px;
+  }
+
+  /* ── Import-Button ─────────────────────────────────────────────────── */
+  .import-btn {
+    font-size: 11px; padding: 3px 10px; border-radius: 4px;
+    background: transparent; border: 1px solid var(--border);
+    color: var(--muted); cursor: pointer; font-family: var(--mono);
+    text-decoration: none; display: inline-block;
+    transition: border-color .15s, color .15s;
+  }
+  .import-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── Notizen Tab ──────────────────────────────────────────────────── */
+  .notiz-list { display: flex; flex-direction: column; gap: 10px; padding: 12px 0; }
+  .notiz-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--blue);
+    border-radius: 8px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: box-shadow 0.15s;
+  }
+  .notiz-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,0.15); }
+  .notiz-card.selected { border-color: var(--accent); background: rgba(255,168,0,0.06); }
+  .notiz-card-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .notiz-betreff { font-weight: 600; font-size: 14px; color: var(--text); }
+  .notiz-datum { font-size: 11px; color: var(--muted); white-space: nowrap; margin-left: 12px; }
+  .notiz-meta { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+  .notiz-preview { font-size: 12px; color: var(--text-secondary); white-space: pre-wrap; 
+                   max-height: 48px; overflow: hidden; line-height: 1.5; }
+  .notiz-add-btn {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--accent); color: #000; font-weight: 700;
+    border: none; border-radius: 8px; padding: 9px 16px; cursor: pointer;
+    font-size: 13px; margin-bottom: 14px;
+  }
+  .notiz-add-btn:hover { opacity: 0.85; }
+
+  /* Notiz-Detail / Formular im rechten Panel */
+  .notiz-form-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;
+  }
+  .notiz-form-grid .full { grid-column: 1 / -1; }
+  .form-field label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
+  .form-field input, .form-field select, .form-field textarea {
+    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 7px 10px; color: var(--text); font-size: 13px;
+    font-family: inherit; box-sizing: border-box;
+  }
+  .form-field textarea { min-height: 220px; resize: vertical; line-height: 1.6; }
+  .form-field input:focus, .form-field select:focus, .form-field textarea:focus {
+    outline: none; border-color: var(--accent);
+  }
+  .notiz-actions { display: flex; gap: 10px; margin-top: 14px; }
+  .btn-danger { background: #c0392b; color: #fff; border: none; border-radius: 6px;
+                padding: 8px 16px; cursor: pointer; font-size: 13px; }
+  .btn-danger:hover { opacity: 0.85; }
+  .d-panel-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 16px; 
+                   padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+
+
+  /* Kommentar-Indikator in Beschluss-Zeile */
+  .col-notiz { font-size: 11px; color: var(--blue); text-align: center; }
+  .col-edit { text-align: center; }
+  .col-edit a {
+    font-size: 11px; color: var(--muted); text-decoration: none;
+    padding: 2px 4px; border-radius: 3px;
+    transition: color .15s;
+  }
+  .col-edit a:hover { color: var(--accent); }
+  
+  /* Verknüpfte Notizen im Detail-Panel */
+  .linked-notizen { margin-top: 4px; display: flex; flex-direction: column; gap: 8px; }
+  .linked-notiz-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--blue);
+    border-radius: 6px;
+    padding: 10px 12px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .linked-notiz-card:hover { border-left-color: var(--accent); }
+  .linked-notiz-betreff { font-weight: 600; color: var(--text); margin-bottom: 3px; }
+  .linked-notiz-meta { color: var(--muted); font-size: 11px; margin-bottom: 4px; }
+  .linked-notiz-preview { color: var(--text-secondary); line-height: 1.5;
+                           white-space: pre-wrap; max-height: 60px; overflow: hidden; }
+  .linked-notiz-empty { color: var(--muted); font-size: 12px; font-style: italic; }
+
+
+  .notiz-gmail-btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    margin-top: 6px; padding: 4px 10px;
+    background: var(--blue); color: #fff;
+    border-radius: 5px; font-size: 11px; font-weight: 600;
+    text-decoration: none; white-space: nowrap;
+  }
+  .notiz-gmail-btn:hover { opacity: 0.85; }
+
+</style>
+</head>
+<body>
+
+<header>
+  <h1>WEG Protokolle</h1>
+  <span class="sep">|</span>
+  <div class="stats-bar">
+    <div class="stat">Protokolle <span id="hdr-proto">–</span></div>
+    <div class="stat">Beschlüsse <span id="hdr-beschl">–</span></div>
+    <div class="stat">Beirat <span id="hdr-beirat">–</span></div>
+  </div>
+</header>
+
+<div class="app">
+  <!-- Sidebar -->
+  <aside>
+    <div class="search-wrap">
+      <input type="search" id="search" placeholder="Suche in Beschlüssen…" autocomplete="off">
+    </div>
+
+    <div class="filter-group">
+      <div class="filter-label">Objekt</div>
+      <div id="objekt-filters"></div>
+    </div>
+
+    <div class="filter-group">
+      <div class="filter-label">Hausverwaltung</div>
+      <div id="hv-filters"></div>
+    </div>
+
+    <div class="filter-group">
+      <div class="filter-label">Jahr</div>
+      <div class="year-grid" id="year-filters"></div>
+    </div>
+
+    <div class="filter-group">
+      <div class="filter-label">Beirat</div>
+      <button class="filter-btn beirat-btn" id="beirat-filter" onclick="toggleBeirat()">
+        🔴 Beirat-relevant
+        <span class="count" id="beirat-count">0</span>
+      </button>
+    </div>
+
+    <div class="filter-group">
+      <div class="filter-label">Status</div>
+      <div id="status-filters">
+        <button class="filter-btn" onclick="toggleStatus('offen')">
+          ○ Offen <span class="count" id="cnt-offen">0</span>
+        </button>
+        <button class="filter-btn" onclick="toggleStatus('in_arbeit')">
+          ◑ In Arbeit <span class="count" id="cnt-arbeit">0</span>
+        </button>
+        <button class="filter-btn" onclick="toggleStatus('erledigt')">
+          ● Erledigt <span class="count" id="cnt-erledigt">0</span>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('beschluesse')">Beschlüsse</button>
+      <button class="tab" onclick="switchTab('protokolle')">Protokolle</button>
+      <button class="tab" onclick="switchTab('beirat')">
+        Beirat <span class="badge" id="tab-beirat-badge">0</span>
+      </button>
+      <button class="tab" onclick="switchTab('notizen')">
+        Notizen <span class="badge" id="tab-notizen-badge">0</span>
+      </button>
+    </div>
+
+    <div class="result-bar">
+      <span id="result-count" class="found">–</span>
+      <button class="clear-btn" onclick="clearFilters()">Filter zurücksetzen</button>
+    </div>
+
+    <!-- Beschlüsse Tab -->
+    <div id="tab-beschluesse" class="list-wrap">
+      <div class="list-header">
+        <span>Objekt</span>
+        <span>Datum</span>
+        <span>TOP</span>
+        <span>Beschluss</span>
+        <span style="text-align:right">Ergebnis</span>
+        <span style="text-align:center">🔴</span>
+        <span style="text-align:center">💬</span>
+        <span></span>
+      </div>
+      <div id="beschluss-list"></div>
+    </div>
+
+    <!-- Protokolle Tab -->
+    <div id="tab-protokolle" class="list-wrap" style="display:none">
+      <div class="proto-grid" id="proto-grid"></div>
+    </div>
+
+    <!-- Beirat Tab -->
+    <div id="tab-beirat" class="list-wrap" style="display:none">
+      <div class="list-header">
+        <span>Objekt</span>
+        <span>Datum</span>
+        <span>TOP</span>
+        <span>Beschluss</span>
+        <span style="text-align:right">Status</span>
+        <span></span>
+      </div>
+      <div id="beirat-list"></div>
+    </div>
+    <!-- Notizen Tab -->
+    <div id="tab-notizen" class="list-wrap" style="display:none">
+      <button class="notiz-add-btn" onclick="neueNotiz()">＋ Neue Notiz</button>
+      <div id="notizen-list"></div>
+    </div>
+
+  </main>
+
+  <!-- Detail Panel -->
+  <div class="detail-panel hidden" id="detail-panel">
+    <div class="detail-header">
+      <div class="d-top" id="d-top">–</div>
+      <div class="d-meta" id="d-meta">–</div>
+      <div id="d-beirat-badge" style="display:none">
+        <span class="d-beirat">🔴 Beirat-relevant</span>
+      </div>
+    </div>
+    <div class="detail-body">
+      <div>
+        <div class="d-section-label" style="display:flex;justify-content:space-between;align-items:center">
+          <span>Beschlusstext</span>
+
+        </div>
+        <div class="d-text" id="d-text">–</div>
+      </div>
+      <div id="d-abstimmung-wrap">
+        <div class="d-section-label">Abstimmung</div>
+        <div class="abstimmung-grid" id="d-abstimmung"></div>
+      </div>
+      <div>
+        <div class="d-section-label">Status</div>
+        <div class="status-row" id="d-status-row">
+          <button class="status-btn s-offen"    onclick="setStatus('offen')">○ Offen</button>
+          <button class="status-btn s-arbeit"   onclick="setStatus('in_arbeit')">◑ In Arbeit</button>
+          <button class="status-btn s-erledigt" onclick="setStatus('erledigt')">● Erledigt</button>
+        </div>
+      </div>
+      <div id="d-notizen-wrap">
+        <div class="d-section-label" style="display:flex;justify-content:space-between;align-items:center">
+          <span>Notizen</span>
+          <button onclick="neueNotizFuerBeschluss()" style="font-size:10px;padding:2px 8px;background:var(--blue);color:#fff;border:none;border-radius:4px;cursor:pointer">＋ Neue Notiz</button>
+        </div>
+        <div class="linked-notizen" id="d-notizen-list"></div>
+      </div>
+      <div>
+        <div class="d-section-label">Protokoll öffnen</div>
+        <a class="pdf-link" id="d-pdf-link" href="#" target="_blank">
+          📄 <span id="d-pdf-name">–</span>
+        </a>
+      </div>
+
+    </div>
+  <!-- Notiz-Detail / Formular (innerhalb detail-panel) -->
+  <div id="notiz-detail" style="display:none; padding:16px 20px; overflow-y:auto;">
+    <div class="d-panel-title" id="notiz-panel-title">Neue Notiz</div>
+    <div class="notiz-form-grid">
+      <div class="form-field">
+        <label>Datum</label>
+        <input type="date" id="nf-datum">
+      </div>
+      <div class="form-field">
+        <label>Hausverwaltung *</label>
+        <select id="nf-hv"></select>
+      </div>
+      <div class="form-field">
+        <label>Objekt *</label>
+        <select id="nf-objekt"></select>
+      </div>
+      <div class="form-field full">
+        <label>Betreff *</label>
+        <input type="text" id="nf-betreff" placeholder="z.B. Rückfrage Jahresabrechnung 2024">
+      </div>
+      <div class="form-field full">
+        <label>Gmail-Link <span style="font-weight:400;color:var(--muted)">(optional – Link aus Gmail kopieren)</span></label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="url" id="nf-gmail-link" placeholder="https://mail.google.com/mail/u/0/..." style="flex:1">
+          <a id="nf-gmail-preview" href="#" target="_blank" style="display:none;padding:5px 10px;background:var(--blue);color:#fff;border-radius:5px;font-size:12px;white-space:nowrap;text-decoration:none">✉ öffnen</a>
+        </div>
+      </div>
+      <div class="form-field full" id="nf-beschluss-wrap" style="display:none">
+        <label>Beschluss-Bezug <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+        <select id="nf-beschluss-id">
+          <option value="">– kein Beschluss-Bezug –</option>
+        </select>
+      </div>
+      <div class="form-field full">
+        <label>Text / E-Mail-Inhalt</label>
+        <textarea id="nf-text" placeholder="Freier Text, E-Mail-Inhalt, Gesprächsnotiz…"></textarea>
+      </div>
+    </div>
+    <div class="notiz-actions">
+      <button class="save-btn" onclick="saveNotiz()">💾 Speichern</button>
+      <button class="btn-danger" id="notiz-delete-btn" onclick="deleteNotiz()" style="display:none">🗑 Löschen</button>
+      <span class="save-note" id="notiz-save-note">✓ gespeichert</span>
+    </div>
+  </div>
+  </div>
+</div>
+
+<script>
+// ── Daten (werden per API geladen) ───────────────────────────────────────────
+let RAW = { protokolle: [], beschluesse: [], edits_meta: {} };
+
+// ── Unified Notizen-System (API-basiert) ─────────────────────────────────────
+// Eine Notiz hat: { id, datum, hv, objekt, betreff, text, status,
+//                   beschluss_id (optional), erstellt_am, geaendert_am }
+
+// In-Memory-Cache der Notizen (wird beim Start geladen)
+let _notizenCache = null;
+
+async function loadNotizenFromAPI() {
+  try {
+    const r = await fetch('/api/notizen');
+    _notizenCache = await r.json();
+  } catch(e) {
+    console.error('Notizen laden fehlgeschlagen:', e);
+    _notizenCache = {};
+  }
+}
+
+function getNotizen() {
+  return _notizenCache || {};
+}
+
+async function saveNotizAPI(notizData) {
+  const r = await fetch('/api/notizen', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(notizData),
+  });
+  const saved = await r.json();
+  // Cache aktualisieren
+  if (!_notizenCache) _notizenCache = {};
+  _notizenCache[saved.id] = saved;
+  return saved;
+}
+
+async function deleteNotizAPI(id) {
+  await fetch(`/api/notizen/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  if (_notizenCache) delete _notizenCache[id];
+}
+
+// Kompatibilitäts-Shims (werden von alten Aufrufen genutzt)
+function getKommentare() {
+  const n = getNotizen();
+  const komm = {};
+  for (const notiz of Object.values(n)) {
+    if (notiz.beschluss_id) {
+      komm[notiz.beschluss_id] = {
+        status: notiz.status || 'offen',
+        kommentar: notiz.text || '',
+      };
+    }
+  }
+  return komm;
+}
+function saveKommentare(data) { /* noop – alles läuft über saveNotizen */ }
+
+// ── State ──────────────────────────────────────────────────────────────────────
+let state = {
+  tab:       'beschluesse',
+  search:    '',
+  objekt:    null,
+  hv:        null,
+  year:      null,
+  beirat:    false,
+  status:    null,
+  selected:  null,
+};
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+async function init() {
+  // Daten + Notizen parallel laden
+  try {
+    const [dataResp] = await Promise.all([
+      fetch('/api/data'),
+      loadNotizenFromAPI(),
+    ]);
+    if (!dataResp.ok) throw new Error(`HTTP ${dataResp.status}`);
+    const data = await dataResp.json();
+    RAW.protokolle  = data.protokolle  || [];
+    RAW.beschluesse = data.beschluesse || [];
+    RAW.edits_meta  = data.edits_meta  || {};
+  } catch(e) {
+    console.error('Daten laden fehlgeschlagen:', e);
+    document.body.innerHTML = `<div style="color:#f88;font-family:monospace;padding:40px">
+      <h2>⚠ Server nicht erreichbar</h2>
+      <p>Bitte starte den Server mit:<br><code>python3 weg_server.py</code></p>
+      <p style="color:#888;font-size:13px">${e}</p>
+    </div>`;
+    return;
+  }
+
+  // Header-Stats
+  const beiratCount = RAW.beschluesse.filter(b => b.beirat_relevant).length;
+  document.getElementById('hdr-proto').textContent  = RAW.protokolle.length;
+  document.getElementById('hdr-beschl').textContent = RAW.beschluesse.length;
+  document.getElementById('hdr-beirat').textContent = beiratCount;
+  document.getElementById('tab-beirat-badge').textContent = beiratCount;
+  document.getElementById('beirat-count').textContent = beiratCount;
+
+  buildFilters();
+  updateStatusCounts();
+  updateNotizBadge();
+  render();
+
+  document.getElementById('search').addEventListener('input', e => {
+    state.search = e.target.value.trim();
+    render();
+  });
+}
+
+// ── Filter aufbauen ────────────────────────────────────────────────────────────
+function buildFilters() {
+  // Objekte
+  const objekte = [...new Set(RAW.protokolle.map(p => p.weg_objekt).filter(Boolean))].sort();
+  const objDiv = document.getElementById('objekt-filters');
+  objDiv.innerHTML = '';
+  // Alle-Button
+  const allBtn = document.createElement('button');
+  allBtn.className = 'filter-btn' + (state.objekt === null ? ' active' : '');
+  allBtn.innerHTML = `Alle <span class="count">${RAW.protokolle.length}</span>`;
+  allBtn.onclick = () => { state.objekt = null; buildFilters(); render(); };
+  objDiv.appendChild(allBtn);
+
+  for (const obj of objekte) {
+    const cnt = RAW.protokolle.filter(p => p.weg_objekt === obj).length;
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn' + (state.objekt === obj ? ' active' : '');
+    btn.innerHTML = `${obj} <span class="count">${cnt}</span>`;
+    btn.onclick = () => { state.objekt = obj; buildFilters(); render(); };
+    objDiv.appendChild(btn);
+  }
+
+  // Hausverwaltungen
+  const hvs = [...new Set(RAW.protokolle.map(p => p.hausverwaltung).filter(Boolean))].sort();
+  const hvDiv = document.getElementById('hv-filters');
+  hvDiv.innerHTML = '';
+  const allHvBtn = document.createElement('button');
+  allHvBtn.className = 'filter-btn' + (state.hv === null ? ' active' : '');
+  allHvBtn.innerHTML = `Alle <span class="count">${RAW.protokolle.length}</span>`;
+  allHvBtn.onclick = () => { state.hv = null; buildFilters(); render(); };
+  hvDiv.appendChild(allHvBtn);
+  for (const hv of hvs) {
+    const cnt = RAW.protokolle.filter(p => p.hausverwaltung === hv).length;
+    const short = hv.replace(' Hausverwaltung GmbH','').replace(' GmbH','').replace(' / La Casa','');
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn' + (state.hv === hv ? ' active' : '');
+    btn.title = hv;
+    btn.innerHTML = `${short} <span class="count">${cnt}</span>`;
+    btn.onclick = () => { state.hv = hv; buildFilters(); render(); };
+    hvDiv.appendChild(btn);
+  }
+
+  // Jahre aus Dateinamen
+  const years = [...new Set(RAW.protokolle.map(p => {
+    const parts = p.dateiname.split('_');
+    return parts.length >= 2 ? parts[1].substring(0,4) : null;
+  }).filter(Boolean))].sort();
+  const yearDiv = document.getElementById('year-filters');
+  yearDiv.innerHTML = '';
+  for (const y of years) {
+    const btn = document.createElement('button');
+    btn.className = 'year-btn' + (state.year === y ? ' active' : '');
+    btn.textContent = y;
+    btn.onclick = () => {
+      state.year = (state.year === y) ? null : y;
+      buildFilters(); render();
+    };
+    yearDiv.appendChild(btn);
+  }
+
+  // Beirat-Filter Button
+  const bb = document.getElementById('beirat-filter');
+  bb.className = 'filter-btn beirat-btn' + (state.beirat ? ' active' : '');
+}
+
+function toggleBeirat() {
+  state.beirat = !state.beirat;
+  buildFilters(); render();
+}
+
+function toggleStatus(s) {
+  state.status = (state.status === s) ? null : s;
+  const btns = document.querySelectorAll('#status-filters .filter-btn');
+  btns.forEach(b => b.classList.remove('active'));
+  if (state.status) {
+    const idx = ['offen','in_arbeit','erledigt'].indexOf(s);
+    if (idx >= 0) btns[idx].classList.add('active');
+  }
+  render();
+}
+
+function clearFilters() {
+  state = { ...state, search: '', objekt: null, hv: null, year: null, beirat: false, status: null };
+  document.getElementById('search').value = '';
+  buildFilters();
+  render();
+}
+
+// ── Filtern ────────────────────────────────────────────────────────────────────
+function filteredBeschluesse() {
+  const komm = getKommentare();
+  return RAW.beschluesse.filter(b => {
+    // Objekt
+    if (state.objekt && b.weg_objekt !== state.objekt) return false;
+    // HV
+    if (state.hv && b.hausverwaltung !== state.hv) return false;
+    // Jahr – aus Dateiname (zuverlässiger als OCR-Datum)
+    if (state.year) {
+      const parts = (b.dateiname||'').split('_');
+      const fileYear = parts.length >= 2 ? parts[1].substring(0,4) : '';
+      if (fileYear !== state.year) return false;
+    }
+    // Beirat
+    if (state.beirat && !b.beirat_relevant) return false;
+    // Status
+    if (state.status) {
+      const k = komm[b.id];
+      const kStatus = k ? k.status : 'offen';
+      if (kStatus !== state.status) return false;
+    }
+    // Tolerante Suche (OCR-Fehler, Umlaute, Leerzeichen)
+    if (state.search) {
+      const fields = [b.beschluss_text, b.top_nr, b.top_titel,
+                      b.weg_objekt, b.versammlungs_datum, b.top_titel];
+      if (!fuzzySearchMatch(state.search, fields)) return false;
+    }
+    return true;
+  });
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────────
+function render() {
+  const results = filteredBeschluesse();
+  document.getElementById('result-count').textContent =
+    `${results.length} Beschlüsse${state.search ? ` für „${state.search}"` : ''}`;
+
+  if (state.tab === 'beschluesse') renderBeschluesse(results);
+  if (state.tab === 'beirat')      renderBeirat();
+  if (state.tab === 'protokolle')  renderProtokolle();
+  if (state.tab === 'notizen')     renderNotizen();
+  updateStatusCounts();
+}
+
+function highlight(text, q) {
+  if (!q || !text) return text || '';
+  // Für jedes Suchwort: exakte + normalisierte Varianten hervorheben
+  let result = text;
+  for (const word of q.trim().split(/\s+/).filter(Boolean)) {
+    const esc = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    try { result = result.replace(new RegExp(`(${esc})`, 'gi'), '<mark>$1</mark>'); }
+    catch(e) {}
+  }
+  return result;
+}
+
+function renderBeschluesse(results) {
+  const container = document.getElementById('beschluss-list');
+  const q = state.search.toLowerCase();
+  if (!results.length) {
+    container.innerHTML = '<div class="empty">Keine Beschlüsse gefunden.</div>';
+    return;
+  }
+  container.innerHTML = results.map(b => {
+    const text = (b.beschluss_text || '').substring(0, 120);
+    const highlighted = q ? highlight(text, state.search) : text;
+    const eb = effectiveB(b);
+    const ergebnisClass = eb.ergebnis === 'angenommen' ? 'ergebnis-angenommen'
+                        : eb.ergebnis === 'abgelehnt'  ? 'ergebnis-abgelehnt' : '';
+    const selected = state.selected === b.id ? ' selected' : '';
+    const beiratRow = b.beirat_relevant ? ' beirat-row' : '';
+    const komm = getKommentare();
+    const hasKomm = komm[b.id] && komm[b.id].kommentar;
+    const notizen = getNotizen();
+    const hasNotiz = Object.values(notizen).some(n =>
+      n.objekt === b.weg_objekt &&
+      n.datum && b.versammlungs_datum && n.datum === b.versammlungs_datum
+    );
+    const notizDot = hasKomm || hasNotiz ? '💬' : '';
+    return `
+      <div class="beschluss-row${selected}${beiratRow}" onclick="selectBeschluss(${b.id})">
+        <div class="col-objekt">${b.weg_objekt || '–'}</div>
+        <div class="col-datum">${b.versammlungs_datum || '–'}</div>
+        <div class="col-top">${b.top_nr}</div>
+        <div class="col-text">${highlighted}</div>
+        <div class="col-ergebnis ${ergebnisClass}">${eb.ergebnis || '–'}</div>
+        <div class="col-beirat">${b.beirat_relevant ? '🔴' : ''}</div>
+        <div class="col-notiz">${notizDot}</div>
+        <div class="col-edit"><a href="/import?proto=${b.protokoll_id}&beschluss=${b.id}" target="_blank" onclick="event.stopPropagation()" title="Bearbeiten">✎</a></div>
+      </div>`;
+  }).join('');
+}
+
+function renderBeirat() {
+  const komm = getKommentare();
+  // Nutze filteredBeschluesse() damit Objekt/HV/Jahr-Filter auch hier wirken
+  const list = filteredBeschluesse().filter(b => b.beirat_relevant);
+  const container = document.getElementById('beirat-list');
+  if (!list.length) {
+    container.innerHTML = '<div class="empty">Keine Beirat-Beschlüsse.</div>';
+    return;
+  }
+  container.innerHTML = list.map(b => {
+    const k = komm[b.id];
+    const status = k ? k.status : 'offen';
+    const statusLabel = status === 'erledigt' ? '● Erledigt'
+                      : status === 'in_arbeit' ? '◑ In Arbeit' : '○ Offen';
+    const statusColor = status === 'erledigt' ? 'var(--green)'
+                      : status === 'in_arbeit' ? 'var(--blue)' : 'var(--accent)';
+    const selected = state.selected === b.id ? ' selected' : '';
+    return `
+      <div class="beschluss-row beirat-row${selected}" onclick="selectBeschluss(${b.id})">
+        <div class="col-objekt">${b.weg_objekt || '–'}</div>
+        <div class="col-datum">${b.versammlungs_datum || '–'}</div>
+        <div class="col-top">${b.top_nr}</div>
+        <div class="col-text">${(b.beschluss_text || '').substring(0,120)}</div>
+        <div class="col-ergebnis" style="color:${statusColor}">${statusLabel}</div>
+        <div></div>
+      </div>`;
+  }).join('');
+}
+
+function renderProtokolle() {
+  // Alle Filter anwenden (Objekt, HV, Jahr)
+  let protos = RAW.protokolle;
+  if (state.objekt) protos = protos.filter(p => p.weg_objekt === state.objekt);
+  if (state.hv)     protos = protos.filter(p => p.hausverwaltung === state.hv);
+  if (state.year)   protos = protos.filter(p => (p.dateiname||'').split('_')[1]?.startsWith(state.year));
+
+  const container = document.getElementById('proto-grid');
+  if (!protos.length) {
+    container.innerHTML = '<div class="empty">Keine Protokolle gefunden.</div>';
+    return;
+  }
+  container.innerHTML = protos.map(p => {
+    // Beschlüsse aus RAW.beschluesse zählen (protokoll_id verknüpft)
+    const beschl = RAW.beschluesse.filter(b => b.protokoll_id === p.id);
+    const beiratCnt = beschl.filter(b => b.beirat_relevant).length;
+    const year = (p.dateiname||'').split('_')[1]?.substring(0,4) || '';
+    // Notizen zum gleichen Objekt + Datum
+    const notizen = getNotizen();
+    const notizCnt = Object.values(notizen).filter(n =>
+      n.objekt === p.weg_objekt && n.datum === p.versammlungs_datum
+    ).length;
+    return `
+      <div class="proto-card">
+        <div class="pc-objekt">${p.weg_objekt || '–'}</div>
+        <div class="pc-datum">${p.versammlungs_datum || year}</div>
+        <div class="pc-hv">${p.hausverwaltung || '–'}</div>
+        <div class="pc-stats">
+          <div class="pc-stat">Beschlüsse <span>${beschl.length}</span></div>
+          ${beiratCnt > 0 ? `<div class="pc-stat"><span class="pc-beirat-dot"></span><span>${beiratCnt} Beirat</span></div>` : ''}
+          ${notizCnt > 0 ? `<div class="pc-stat">💬 <span>${notizCnt} Notiz${notizCnt>1?'en':''}</span></div>` : ''}
+          <a class="pdf-link" href="output/${p.dateiname}" target="_blank" style="padding:3px 8px;font-size:10px;margin-left:auto" onclick="event.stopPropagation()">PDF</a>
+          <a class="import-btn" href="/import?proto=${p.id}" target="_blank" onclick="event.stopPropagation()">✎</a>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── Detail ─────────────────────────────────────────────────────────────────────
+function selectBeschluss(id) {
+  state.selected = id;
+  hideNotizPanel();
+
+  // Import-Button wird in refreshDetailPanel() gesetzt
+
+  const b  = RAW.beschluesse.find(x => x.id === id);
+  if (!b) return;
+  const eb = effectiveB(b);
+
+  const komm = getKommentare();
+  const k = komm[id] || { status: 'offen', kommentar: '' };
+
+  // Header
+  document.getElementById('d-top').textContent  = `TOP ${b.top_nr}`;
+  document.getElementById('d-meta').textContent =
+    `${b.weg_objekt}  ·  ${b.versammlungs_datum}  ·  ${b.hausverwaltung}`;
+  const badge = document.getElementById('d-beirat-badge');
+  badge.style.display = b.beirat_relevant ? 'block' : 'none';
+
+  // Text (effektiv)
+  document.getElementById('d-text').textContent = eb.beschluss_text || '(kein Text erkannt)';
+
+  // Abstimmung (effektiv)
+  const abstWrap = document.getElementById('d-abstimmung-wrap');
+  if (eb.ja_stimmen || eb.nein_stimmen || eb.enthaltungen) {
+    abstWrap.style.display = 'block';
+    document.getElementById('d-abstimmung').innerHTML = `
+      <div class="abstimmung-cell">
+        <div class="a-label">JA</div>
+        <div class="a-val a-ja">${eb.ja_stimmen || '–'}</div>
+      </div>
+      <div class="abstimmung-cell">
+        <div class="a-label">NEIN</div>
+        <div class="a-val a-nein">${eb.nein_stimmen || '–'}</div>
+      </div>
+      <div class="abstimmung-cell">
+        <div class="a-label">Enthaltung</div>
+        <div class="a-val a-enth">${eb.enthaltungen || '–'}</div>
+      </div>`;
+  } else {
+    abstWrap.style.display = 'none';
+  }
+
+  // Status-Buttons: aus Notizen lesen
+  const notizForBeschluss = Object.values(getNotizen()).find(n => n.beschluss_id === id);
+  const currentStatus = notizForBeschluss?.status || 'offen';
+  document.querySelectorAll('.status-btn').forEach(btn => btn.classList.remove('active'));
+  const statusMap = { 'offen': 's-offen', 'in_arbeit': 's-arbeit', 'erledigt': 's-erledigt' };
+  document.querySelector(`.${statusMap[currentStatus]}`)?.classList.add('active');
+
+  // PDF-Link – Pfad: output/<dateiname>
+  const pdfLink = document.getElementById('d-pdf-link');
+  pdfLink.href = `output/${b.dateiname}`;
+  document.getElementById('d-pdf-name').textContent = b.dateiname.replace('_durchsuchbar','');
+
+  // Notizen zu diesem Beschluss
+  renderBeschlussNotizen(id);
+
+  // Panel zeigen
+  document.getElementById('detail-panel').classList.remove('hidden');
+
+  // Liste neu rendern (für selected-Markierung)
+  if (state.tab === 'beschluesse') renderBeschluesse(filteredBeschluesse());
+  if (state.tab === 'beirat') renderBeirat();
+}
+
+function setStatus(s) {
+  if (!state.selected) return;
+  // Status-Änderung: Notiz für diesen Beschluss suchen (oder anlegen) und Status setzen
+  const all = getNotizen();
+  const b = RAW.beschluesse.find(x => x.id === state.selected);
+  // Suche direkt verknüpfte Notiz
+  let notiz = Object.values(all).find(n => n.beschluss_id === state.selected);
+  if (!notiz) {
+    // Neue Notiz anlegen mit Status
+    const id = 'auto_' + state.selected;
+    all[id] = {
+      id, status: s,
+      datum: b?.versammlungs_datum || '',
+      hv: b?.hausverwaltung || '',
+      objekt: b?.weg_objekt || '',
+      betreff: b ? `TOP ${b.top_nr}: ${(b.top_titel||'').substring(0,60)}` : 'Status-Notiz',
+      text: '',
+      beschluss_id: state.selected,
+      erstellt_am: new Date().toISOString(),
+      geaendert_am: new Date().toISOString(),
+    };
+  } else {
+    all[notiz.id].status = s;
+    all[notiz.id].geaendert_am = new Date().toISOString();
+  }
+  saveNotizen(all);
+
+  document.querySelectorAll('.status-btn').forEach(btn => btn.classList.remove('active'));
+  const statusMap = { 'offen': 's-offen', 'in_arbeit': 's-arbeit', 'erledigt': 's-erledigt' };
+  document.querySelector(`.${statusMap[s]}`)?.classList.add('active');
+
+  updateStatusCounts();
+  renderBeschlussNotizen(state.selected);
+  renderNotizen();
+  if (state.tab === 'beirat') renderBeirat();
+}
+
+
+function updateStatusCounts() {
+  const komm = getKommentare();
+  const beiratIds = RAW.beschluesse.filter(b => b.beirat_relevant).map(b => b.id);
+  let offen = 0, arbeit = 0, erledigt = 0;
+  for (const id of beiratIds) {
+    const s = komm[id] ? komm[id].status : 'offen';
+    if (s === 'offen')     offen++;
+    if (s === 'in_arbeit') arbeit++;
+    if (s === 'erledigt')  erledigt++;
+  }
+  document.getElementById('cnt-offen').textContent   = offen;
+  document.getElementById('cnt-arbeit').textContent  = arbeit;
+  document.getElementById('cnt-erledigt').textContent = erledigt;
+}
+
+// ── Tabs ───────────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  state.tab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+
+  document.getElementById('tab-beschluesse').style.display = tab === 'beschluesse' ? 'block' : 'none';
+  document.getElementById('tab-protokolle').style.display  = tab === 'protokolle'  ? 'block' : 'none';
+  document.getElementById('tab-beirat').style.display      = tab === 'beirat'      ? 'block' : 'none';
+  document.getElementById('tab-notizen').style.display     = tab === 'notizen'     ? 'block' : 'none';
+  if (tab !== 'notizen') hideNotizPanel();
+
+  render();
+}
+
+
+// ── Notizen-System ───────────────────────────────────────────────────────────
+
+let notizEditId = null;
+let notizPanelOpen = false;
+
+// Datumskonvertierung
+function toIsoDate(d) {
+  if (!d) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+  const p = d.split('.');
+  if (p.length === 3) return `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+  return '';
+}
+function toDisplayDate(d) {
+  if (!d) return '';
+  if (/^\d{2}\.\d{2}\.\d{4}$/.test(d)) return d;
+  const p = d.split('-');
+  if (p.length === 3) return `${p[2]}.${p[1]}.${p[0]}`;
+  return d;
+}
+
+function getNotizCount() { return Object.keys(getNotizen()).length; }
+
+function updateNotizBadge() {
+  document.getElementById('tab-notizen-badge').textContent = getNotizCount();
+}
+
+function fillNotizSelects(objekt, hv) {
+  const hvSelect  = document.getElementById('nf-hv');
+  const objSelect = document.getElementById('nf-objekt');
+  if (!hvSelect || !objSelect) return;
+  const hvs  = [...new Set(RAW.protokolle.map(p => p.hausverwaltung).filter(Boolean))].sort();
+  const objs = [...new Set(RAW.protokolle.map(p => p.weg_objekt).filter(Boolean))].sort();
+  const shortHv = h => h.replace(' Hausverwaltung GmbH','').replace(' GmbH','').replace(' / La Casa','');
+  hvSelect.innerHTML  = '<option value="">– Hausverwaltung wählen –</option>'
+    + hvs.map(h => `<option value="${h}">${shortHv(h)}</option>`).join('');
+  objSelect.innerHTML = '<option value="">– Objekt wählen –</option>'
+    + objs.map(o => `<option value="${o}">${o}</option>`).join('');
+  if (hv)     hvSelect.value  = hv;
+  if (objekt) objSelect.value = objekt;
+}
+
+function fillBeschlussSelect(objekt, beschlussId) {
+  const sel = document.getElementById('nf-beschluss-id');
+  const wrap = document.getElementById('nf-beschluss-wrap');
+  if (!sel) return;
+  // Nur Beschlüsse des gewählten Objekts anbieten
+  const beschl = objekt
+    ? RAW.beschluesse.filter(b => b.weg_objekt === objekt)
+    : RAW.beschluesse;
+  sel.innerHTML = '<option value="">– kein Beschluss-Bezug –</option>'
+    + beschl.map(b => `<option value="${b.id}">${b.versammlungs_datum} · TOP ${b.top_nr} · ${(b.top_titel||b.beschluss_text||'').substring(0,50)}</option>`).join('');
+  if (beschlussId) sel.value = beschlussId;
+  if (wrap) wrap.style.display = 'block';
+}
+
+function neueNotiz(prefill) {
+  notizEditId = null;
+  const p = prefill || {};
+  fillNotizSelects(p.objekt, p.hv);
+  fillBeschlussSelect(p.objekt, p.beschluss_id);
+
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('nf-datum').value   = p.datum ? toIsoDate(p.datum) : today;
+  document.getElementById('nf-betreff').value = p.betreff || '';
+  document.getElementById('nf-text').value    = p.text || '';
+  const gmailInp = document.getElementById('nf-gmail-link');
+  const gmailPrev = document.getElementById('nf-gmail-preview');
+  if (gmailInp) gmailInp.value = p.gmail_link || '';
+  if (gmailPrev) gmailPrev.style.display = 'none';
+
+  document.getElementById('notiz-panel-title').textContent = 'Neue Notiz';
+  document.getElementById('notiz-delete-btn').style.display = 'none';
+  document.getElementById('notiz-save-note').style.opacity = '0';
+  showNotizPanel();
+  renderNotizen(); // Liste neu rendern (keine Karte selected bei neuer Notiz)
+}
+
+function editNotiz(id) {
+  notizEditId = id;
+  const n = getNotizen()[id];
+  if (!n) return;
+  fillNotizSelects(n.objekt, n.hv);
+  fillBeschlussSelect(n.objekt, n.beschluss_id);
+  document.getElementById('nf-datum').value   = toIsoDate(n.datum || '');
+  document.getElementById('nf-betreff').value = n.betreff || '';
+  document.getElementById('nf-text').value    = n.text || '';
+  const gmailInput = document.getElementById('nf-gmail-link');
+  const gmailPreview = document.getElementById('nf-gmail-preview');
+  if (gmailInput) gmailInput.value = n.gmail_link || '';
+  if (gmailPreview) {
+    if (n.gmail_link) {
+      gmailPreview.href = n.gmail_link;
+      gmailPreview.style.display = 'inline-flex';
+    } else {
+      gmailPreview.style.display = 'none';
+    }
+  }
+  document.getElementById('notiz-panel-title').textContent = 'Notiz bearbeiten';
+  document.getElementById('notiz-delete-btn').style.display = 'inline-block';
+  document.getElementById('notiz-save-note').style.opacity = '0';
+  showNotizPanel();
+  renderNotizen(); // Liste sofort neu rendern damit selected-Markierung stimmt
+}
+
+function showNotizPanel() {
+  document.getElementById('detail-panel').classList.remove('hidden');
+  document.querySelector('.detail-header').style.display = 'none';
+  document.querySelector('.detail-body').style.display   = 'none';
+  document.getElementById('notiz-detail').style.display = 'block';
+  state.selected = null;
+  notizPanelOpen = true;
+  // Live-Vorschau: Gmail-Link sofort als Button anzeigen wenn eingefügt
+  const gmailInput = document.getElementById('nf-gmail-link');
+  const gmailPreview = document.getElementById('nf-gmail-preview');
+  if (gmailInput && gmailPreview) {
+    gmailInput.oninput = () => {
+      const val = gmailInput.value.trim();
+      if (val.startsWith('https://mail.google.com/')) {
+        gmailPreview.href = val;
+        gmailPreview.style.display = 'inline-flex';
+      } else {
+        gmailPreview.style.display = 'none';
+      }
+    };
+  }
+}
+
+function hideNotizPanel() {
+  if (document.querySelector('.detail-header'))
+    document.querySelector('.detail-header').style.display = '';
+  if (document.querySelector('.detail-body'))
+    document.querySelector('.detail-body').style.display   = '';
+  document.getElementById('notiz-detail').style.display   = 'none';
+  notizEditId = null;
+  notizPanelOpen = false;
+  // Liste neu rendern damit selected-Klasse sofort verschwindet
+  if (state.tab === 'notizen') renderNotizen();
+}
+
+async function saveNotiz() {
+  const hv     = document.getElementById('nf-hv').value.trim();
+  const objekt = document.getElementById('nf-objekt').value.trim();
+  const betreff= document.getElementById('nf-betreff').value.trim();
+  if (!hv)      { alert('Bitte Hausverwaltung wählen.'); return; }
+  if (!objekt)  { alert('Bitte Objekt wählen.'); return; }
+  if (!betreff) { alert('Bitte Betreff eingeben.'); return; }
+
+  const all = getNotizen();
+  const beschlussId = document.getElementById('nf-beschluss-id')?.value;
+  const oldStatus = all[notizEditId]?.status || 'offen';
+  const id = notizEditId || ('n_' + Date.now());
+
+  const notizData = {
+    id,
+    datum:        toDisplayDate(document.getElementById('nf-datum').value.trim()),
+    hv,
+    objekt,
+    betreff,
+    text:         document.getElementById('nf-text').value,
+    status:       oldStatus,
+    beschluss_id: beschlussId ? parseInt(beschlussId) : null,
+    gmail_link:   (document.getElementById('nf-gmail-link')?.value || '').trim(),
+  };
+
+  try {
+    const saved = await saveNotizAPI(notizData);
+    notizEditId = saved.id;
+  } catch(e) {
+    alert('Speichern fehlgeschlagen: ' + e);
+    return;
+  }
+
+  document.getElementById('notiz-delete-btn').style.display = 'inline-block';
+  document.getElementById('notiz-panel-title').textContent  = 'Notiz bearbeiten';
+  const note = document.getElementById('notiz-save-note');
+  note.style.opacity = '1';
+  setTimeout(() => note.style.opacity = '0', 2000);
+  updateNotizBadge();
+  renderNotizen();
+  if (state.selected) renderBeschlussNotizen(state.selected);
+}
+
+async function setNotizStatus(id, s) {
+  const all = getNotizen();
+  if (!all[id]) return;
+  all[id].status = s;  // optimistisch lokal updaten
+  try {
+    await saveNotizAPI(all[id]);
+  } catch(e) {
+    console.error('Status speichern fehlgeschlagen:', e);
+  }
+  renderNotizen();
+  updateStatusCounts();
+}
+
+async function deleteNotiz() {
+  if (!notizEditId) return;
+  if (!confirm('Notiz wirklich löschen?')) return;
+  try {
+    await deleteNotizAPI(notizEditId);
+  } catch(e) {
+    alert('Löschen fehlgeschlagen: ' + e);
+    return;
+  }
+  notizEditId = null;
+  document.getElementById('detail-panel').classList.add('hidden');
+  hideNotizPanel();
+  updateNotizBadge();
+  renderNotizen();
+  if (state.selected) renderBeschlussNotizen(state.selected);
+}
+
+function renderNotizen() {
+  const container = document.getElementById('notizen-list');
+  if (!container) return;
+  const all = getNotizen();
+  const q   = state.search.toLowerCase();
+
+  let list = Object.values(all).sort((a,b) =>
+    (b.geaendert_am||'').localeCompare(a.geaendert_am||''));
+
+  // Filter
+  if (state.objekt) list = list.filter(n => n.objekt === state.objekt);
+  if (state.hv)     list = list.filter(n => n.hv === state.hv);
+  if (state.year)   list = list.filter(n => (n.datum||'').endsWith(state.year));
+  if (state.status) list = list.filter(n => (n.status||'offen') === state.status);
+  if (q)            list = list.filter(n =>
+    fuzzySearchMatch(state.search, [n.betreff, n.text, n.datum, n.hv, n.objekt]));
+
+  if (!list.length) {
+    container.innerHTML = '<div class="empty">Keine Notizen vorhanden.</div>';
+    return;
+  }
+
+  const statusLabel = s => s === 'erledigt' ? '● Erledigt'
+                         : s === 'in_arbeit' ? '◑ In Arbeit' : '○ Offen';
+  const statusColor = s => s === 'erledigt' ? 'var(--green)'
+                         : s === 'in_arbeit' ? 'var(--blue)' : 'var(--accent)';
+  const shortHv = h => (h||'').replace(' Hausverwaltung GmbH','').replace(' GmbH','').replace(' / La Casa','');
+
+  container.innerHTML = list.map(n => {
+    const beschlussHint = n.beschluss_id
+      ? (() => { const b = RAW.beschluesse.find(x => x.id === n.beschluss_id);
+                 return b ? ` · TOP ${b.top_nr}` : ''; })()
+      : '';
+    const isSelected = (notizPanelOpen && notizEditId === n.id) ? ' selected' : '';
+    const st = n.status || 'offen';
+    return `
+      <div class="notiz-card${isSelected}" onclick="editNotiz('${n.id}')">
+        <div class="notiz-card-header">
+          <span class="notiz-betreff">${n.betreff||'(kein Betreff)'}</span>
+          <span class="notiz-datum">${n.datum||''}</span>
+        </div>
+        <div class="notiz-meta">${n.objekt} · ${shortHv(n.hv)}${beschlussHint}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+          ${n.text ? `<div class="notiz-preview">${(n.text).substring(0,100)}${n.text.length>100?'…':''}</div>` : '<div></div>'}
+          <span style="font-size:11px;color:${statusColor(st)};white-space:nowrap;margin-left:8px">${statusLabel(st)}</span>
+        </div>
+        ${n.gmail_link ? `<a class="notiz-gmail-btn" href="${n.gmail_link}" target="_blank" onclick="event.stopPropagation()">✉ E-Mail öffnen</a>` : ''}
+      </div>`;
+  }).join('');
+}
+
+// Notizen im Beschluss-Detail-Panel anzeigen
+function renderBeschlussNotizen(beschlussId) {
+  const container = document.getElementById('d-notizen-list');
+  if (!container) return;
+  const all = getNotizen();
+
+  // Notizen die direkt diesem Beschluss zugeordnet sind
+  const direct  = Object.values(all).filter(n => n.beschluss_id === beschlussId);
+  // Notizen zum gleichen Protokoll (Objekt + Datum) ohne direkten Beschluss-Bezug
+  const b = RAW.beschluesse.find(x => x.id === beschlussId);
+  const proto = b ? Object.values(all).filter(n =>
+    !n.beschluss_id && n.objekt === b.weg_objekt && n.datum === b.versammlungs_datum
+  ) : [];
+
+  const list = [...direct, ...proto];
+
+  if (!list.length) {
+    container.innerHTML = '<div class="linked-notiz-empty">Keine Notizen zu diesem Beschluss oder Protokoll.</div>';
+    return;
+  }
+
+  const shortHv = h => (h||'').replace(' Hausverwaltung GmbH','').replace(' GmbH','').replace(' / La Casa','');
+  container.innerHTML = list.map(n => `
+    <div class="linked-notiz-card" onclick="editNotiz('${n.id}'); switchTabDirect('notizen')">
+      <div class="linked-notiz-betreff">${n.betreff||'(kein Betreff)'}</div>
+      <div class="linked-notiz-meta">${n.datum||''} · ${shortHv(n.hv)}${n.beschluss_id ? ' · direkt verknüpft' : ' · Protokoll-Notiz'}</div>
+      ${n.text ? `<div class="linked-notiz-preview">${n.text.substring(0,120)}${n.text.length>120?'…':''}</div>` : ''}
+      ${n.gmail_link ? `<a class="notiz-gmail-btn" href="${n.gmail_link}" target="_blank" onclick="event.stopPropagation()" style="margin-top:6px">✉ E-Mail öffnen</a>` : ''}
+    </div>
+  `).join('');
+}
+
+// Neue Notiz mit Beschluss-Kontext vorausgefüllt
+function neueNotizFuerBeschluss() {
+  if (!state.selected) return;
+  const b = RAW.beschluesse.find(x => x.id === state.selected);
+  if (!b) return;
+  neueNotiz({
+    objekt: b.weg_objekt,
+    hv: b.hausverwaltung,
+    datum: b.versammlungs_datum,
+    beschluss_id: b.id,
+    betreff: `TOP ${b.top_nr}: ${(b.top_titel||'').substring(0,60)}`,
+  });
+}
+
+function switchTabDirect(tab) {
+  state.tab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => {
+    if ((t.getAttribute('onclick')||'').includes(`'${tab}'`)) t.classList.add('active');
+  });
+  document.getElementById('tab-beschluesse').style.display = tab === 'beschluesse' ? 'block' : 'none';
+  document.getElementById('tab-protokolle').style.display  = tab === 'protokolle'  ? 'block' : 'none';
+  document.getElementById('tab-beirat').style.display      = tab === 'beirat'      ? 'block' : 'none';
+  document.getElementById('tab-notizen').style.display     = tab === 'notizen'     ? 'block' : 'none';
+  if (tab !== 'notizen') hideNotizPanel();
+  render();
+}
+
+// ── Tolerante Suche (OCR-Fehler, Umlaute, Leerzeichen) ───────────────────────
+
+function normalizeSearch(s) {
+  if (!s) return '';
+  s = s.toLowerCase();
+  s = s.replace(/ß/g, 'ss');
+  s = s.replace(/[äÄ]/g, 'ae').replace(/[öÖ]/g, 'oe').replace(/[üÜ]/g, 'ue');
+  s = s.replace(/\s+/g, ''); // Leerzeichen entfernen (OCR-Artefakte)
+  return s;
+}
+
+function levenshtein(a, b) {
+  if (a.length < b.length) { const t = a; a = b; b = t; }
+  if (!b.length) return a.length;
+  let prev = Array.from({length: b.length+1}, (_,i) => i);
+  for (const ca of a) {
+    const curr = [prev[0]+1];
+    for (let j = 0; j < b.length; j++) {
+      curr.push(Math.min(prev[j+1]+1, curr[j]+1, prev[j]+(ca!==b[j]?1:0)));
+    }
+    prev = curr;
+  }
+  return prev[b.length];
+}
+
+function fuzzyContains(query, text, threshold=0.82) {
+  if (!query || !text) return false;
+  const q = normalizeSearch(query);
+  const t = normalizeSearch(text);
+  if (!q) return true;
+  if (t.includes(q)) return true;          // exakter Treffer nach Normalisierung
+  if (q.length < 4) return t.includes(q); // kurze Queries nur exakt
+  // Sliding-Window Levenshtein mit variablen Fensterbreiten (±2)
+  // Nötig weil Umlaut-Normalisierung Längen verändert (ä→ae: +1 Zeichen)
+  let best = 0;
+  for (const w of [q.length, q.length-1, q.length+1, q.length-2, q.length+2]) {
+    if (w < 3 || w > t.length) continue;
+    for (let i = 0; i <= t.length - w; i++) {
+      const dist  = levenshtein(q, t.slice(i, i + w));
+      const ratio = 1 - dist / Math.max(q.length, 1);
+      if (ratio > best) best = ratio;
+      if (best >= 1.0) break;
+    }
+  }
+  return best >= threshold;
+}
+
+// Suche nach mehreren Wörtern: alle müssen matchen (AND-Logik)
+function fuzzySearchMatch(query, fields) {
+  const words = query.trim().split(/\s+/).filter(Boolean);
+  const haystack = fields.join(' ');
+  return words.every(w => fuzzyContains(w, haystack));
+}
+
+// ── Manueller Editor (API-basiert) ───────────────────────────────────────────
+// Edits werden direkt in die DB geschrieben (beschluesse + beschluss_edits)
+// RAW.edits_meta = { [beschluss_id]: [felder] } für Badge-Anzeige
+
+// Effektive Felder (kein Merge mehr nötig, Edits stehen direkt in RAW)
+function effectiveB(b) { return b; }
+function hasEdit(id)   { return !!(RAW.edits_meta && RAW.edits_meta[id] && RAW.edits_meta[id].length > 0); }
+
+
+// Detail-Panel mit effektiven Werten (Original + Überschreibung) befüllen
+function refreshDetailPanel() {
+  if (!state.selected) return;
+  const b  = RAW.beschluesse.find(x => x.id === state.selected);
+  const eb = effectiveB(b);
+
+  // Beschlusstext
+  document.getElementById('d-text').textContent = eb.beschluss_text || '(kein Text erkannt)';
+
+  
+
+  // Abstimmung
+  const abstWrap = document.getElementById('d-abstimmung-wrap');
+  if (eb.ja_stimmen || eb.nein_stimmen || eb.enthaltungen) {
+    abstWrap.style.display = 'block';
+    document.getElementById('d-abstimmung').innerHTML = `
+      <div class="abstimmung-cell">
+        <div class="a-label">JA</div>
+        <div class="a-val a-ja">${eb.ja_stimmen || '–'}</div>
+      </div>
+      <div class="abstimmung-cell">
+        <div class="a-label">NEIN</div>
+        <div class="a-val a-nein">${eb.nein_stimmen || '–'}</div>
+      </div>
+      <div class="abstimmung-cell">
+        <div class="a-label">Enthaltung</div>
+        <div class="a-val a-enth">${eb.enthaltungen || '–'}</div>
+      </div>`;
+  } else {
+    abstWrap.style.display = 'none';
+  }
+}
+
+// ── Start ──────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
