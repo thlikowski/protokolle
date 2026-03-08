@@ -316,35 +316,6 @@
   /* Modi: list / new / edit */
   #form-panel { position: relative; }
 
-  /* LISTE-Modus: nur +Neu-Button, Formular ausgeblendet */
-  .mode-list  .form-scroll   { display: none; }
-  .mode-list  .form-actions  { display: none; }
-  .mode-list  #btn-new-wrap  { display: flex; }
-
-  /* NEU-Modus */
-  .mode-new   #btn-new-wrap  { display: none; }
-  .mode-new   #btn-delete    { display: none; }
-  .mode-new   #btn-save      { background: var(--accent2); }
-  .mode-new   .panel-hdr     { color: var(--accent2); }
-
-  /* BEARBEITEN-Modus */
-  .mode-edit  #btn-new-wrap  { display: none; }
-  .mode-edit  #btn-delete    { display: inline-block; }
-  .mode-edit  #btn-save      { background: var(--accent); }
-  .mode-edit  .panel-hdr     { background: #2d1f0a; border-bottom-color: var(--warn); }
-  .mode-edit  #form-title    { color: var(--warn); }
-
-  #btn-new-wrap {
-    display: none;
-    padding: 20px 14px;
-    justify-content: center;
-  }
-  #btn-new-wrap .btn {
-    font-size: 13px;
-    padding: 10px 24px;
-  }
-  #edit-indicator { display: none; }
-
   /* ── Modi ── */
   /* LISTE: Formular + Actions versteckt, +Neu sichtbar */
   .mode-list .form-scroll  { display: none; }
@@ -358,11 +329,30 @@
   .mode-new .panel-hdr    { color: var(--accent2); }
 
   /* BEARBEITEN: +Neu weg, Löschen sichtbar, Speichern blau, Header orange */
-  .mode-edit #btn-new-wrap { display: none; }
-  .mode-edit #btn-delete   { display: inline-block !important; }
-  .mode-edit #btn-save     { background: var(--accent); }
-  .mode-edit .panel-hdr    { background: #2d1f0a; border-bottom-color: var(--warn); }
-  .mode-edit #form-title   { color: var(--warn); }
+  .mode-edit #btn-new-wrap   { display: none; }
+  .mode-edit #btn-delete     { display: inline-block !important; }
+  .mode-edit #btn-save       { background: var(--accent); }
+  .mode-edit .panel-hdr      { background: #2d1f0a; border-bottom-color: var(--warn); }
+  .mode-edit #form-title     { color: var(--warn); }
+  .mode-edit #btn-new-header { display: inline-flex; }
+
+  /* NEU: +Neu-Header-Button ausblenden (man ist schon im NEU-Formular) */
+  .mode-new #btn-new-header  { display: none; }
+
+  #btn-new-header {
+    display: none;
+    align-items: center; gap: 5px;
+    padding: 3px 10px;
+    font-size: 11px;
+    background: var(--accent2);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace;
+    white-space: nowrap;
+  }
+  #btn-new-header:hover { opacity: .85; }
 
   #btn-new-wrap {
     display: none;
@@ -413,7 +403,7 @@
   <div id="form-panel" class="mode-list">
     <div class="panel-hdr">
       <span id="form-title">BESCHLUSS EINGEBEN</span>
-      <span id="edit-indicator" style="color:var(--warn);display:none">✎ Bearbeitung</span>
+      <button id="btn-new-header" onclick="setMode('new')" title="Neuen Beschluss anlegen">＋ Neuer Beschluss</button>
     </div>
     <div class="form-scroll">
 
@@ -746,7 +736,7 @@ async function saveBeschluss() {
     await loadBeschluesse();
 
     if (wasNew) {
-      setMode('list');
+      setMode('new');   // direkt nächsten Beschluss anlegen
     } else {
       currentBeschluss = saved.id;
       loadBeschluss(saved.id);
