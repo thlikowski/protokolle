@@ -669,12 +669,46 @@
 
   .notiz-gmail-btn {
     display: inline-flex; align-items: center; gap: 5px;
-    margin-top: 6px; padding: 4px 10px;
+    margin-top: 4px; padding: 4px 10px;
     background: var(--blue); color: #fff;
     border-radius: 5px; font-size: 11px; font-weight: 600;
     text-decoration: none; white-space: nowrap;
   }
   .notiz-gmail-btn:hover { opacity: 0.85; }
+
+  /* ── Mehrere E-Mail-Links ─────────────────────────────────────────────────── */
+  .gmail-link-row {
+    display: flex; gap: 6px; align-items: center;
+  }
+  .gmail-link-row .gmail-label-inp {
+    width: 140px; flex-shrink: 0;
+    background: var(--bg); border: 1px solid var(--border2);
+    color: var(--text); border-radius: 5px; padding: 5px 8px; font-size: 12px;
+  }
+  .gmail-link-row .gmail-url-inp {
+    flex: 1;
+    background: var(--bg); border: 1px solid var(--border2);
+    color: var(--text); border-radius: 5px; padding: 5px 8px; font-size: 12px;
+  }
+  .gmail-link-row .gmail-open-btn {
+    padding: 5px 9px; background: var(--blue); color: #fff;
+    border: none; border-radius: 5px; font-size: 11px; font-weight: 600;
+    text-decoration: none; white-space: nowrap; cursor: pointer;
+    display: none;
+  }
+  .gmail-link-row .gmail-open-btn:hover { opacity: 0.85; }
+  .gmail-link-row .gmail-remove-btn {
+    background: none; border: 1px solid var(--border2); color: var(--muted);
+    border-radius: 5px; padding: 4px 8px; font-size: 13px; cursor: pointer;
+    line-height: 1; flex-shrink: 0;
+  }
+  .gmail-link-row .gmail-remove-btn:hover { border-color: var(--beirat); color: var(--beirat); }
+  .gmail-add-link-btn {
+    background: none; border: 1px dashed var(--border2); color: var(--muted);
+    border-radius: 5px; padding: 5px 12px; font-size: 12px; cursor: pointer;
+    width: 100%; text-align: left;
+  }
+  .gmail-add-link-btn:hover { border-color: var(--blue); color: var(--blue); }
 
 </style>
 </head>
@@ -859,11 +893,9 @@
         <input type="text" id="nf-betreff" placeholder="z.B. Rückfrage Jahresabrechnung 2024">
       </div>
       <div class="form-field full">
-        <label>Gmail-Link <span style="font-weight:400;color:var(--muted)">(optional – Link aus Gmail kopieren)</span></label>
-        <div style="display:flex;gap:6px;align-items:center">
-          <input type="url" id="nf-gmail-link" placeholder="https://mail.google.com/mail/u/0/..." style="flex:1">
-          <a id="nf-gmail-preview" href="#" target="_blank" style="display:none;padding:5px 10px;background:var(--blue);color:#fff;border-radius:5px;font-size:12px;white-space:nowrap;text-decoration:none">✉ öffnen</a>
-        </div>
+        <label>E-Mail-Links <span style="font-weight:400;color:var(--muted)">(optional – Links aus Gmail kopieren)</span></label>
+        <div id="nf-gmail-links-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px"></div>
+        <button type="button" class="gmail-add-link-btn" onclick="addGmailLinkRow()">+ Link hinzufügen</button>
       </div>
       <div class="form-field full" id="nf-beschluss-wrap" style="display:none">
         <label>Beschluss-Bezug <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
@@ -1450,10 +1482,7 @@ function neueNotiz(prefill) {
   document.getElementById('nf-datum').value   = p.datum ? toIsoDate(p.datum) : today;
   document.getElementById('nf-betreff').value = p.betreff || '';
   document.getElementById('nf-text').value    = p.text || '';
-  const gmailInp = document.getElementById('nf-gmail-link');
-  const gmailPrev = document.getElementById('nf-gmail-preview');
-  if (gmailInp) gmailInp.value = p.gmail_link || '';
-  if (gmailPrev) gmailPrev.style.display = 'none';
+  setGmailLinks(p.gmail_links || []);
 
   document.getElementById('notiz-panel-title').textContent = 'Neue Notiz';
   document.getElementById('notiz-delete-btn').style.display = 'none';
@@ -1471,23 +1500,65 @@ function editNotiz(id) {
   document.getElementById('nf-datum').value   = toIsoDate(n.datum || '');
   document.getElementById('nf-betreff').value = n.betreff || '';
   document.getElementById('nf-text').value    = n.text || '';
-  const gmailInput = document.getElementById('nf-gmail-link');
-  const gmailPreview = document.getElementById('nf-gmail-preview');
-  if (gmailInput) gmailInput.value = n.gmail_link || '';
-  if (gmailPreview) {
-    if (n.gmail_link) {
-      gmailPreview.href = n.gmail_link;
-      gmailPreview.style.display = 'inline-flex';
-    } else {
-      gmailPreview.style.display = 'none';
-    }
-  }
+  setGmailLinks(n.gmail_links || []);
   document.getElementById('notiz-panel-title').textContent = 'Notiz bearbeiten';
   document.getElementById('notiz-delete-btn').style.display = 'inline-block';
   document.getElementById('notiz-save-note').style.opacity = '0';
   showNotizPanel();
   renderNotizen(); // Liste sofort neu rendern damit selected-Markierung stimmt
 }
+
+// ── Gmail-Link-Liste ─────────────────────────────────────────────────────────
+
+function _esc(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+
+function addGmailLinkRow(label = '', url = '') {
+  const list = document.getElementById('nf-gmail-links-list');
+  const row = document.createElement('div');
+  row.className = 'gmail-link-row';
+  row.innerHTML = `
+    <input class="gmail-label-inp" type="text" placeholder="Bezeichnung (optional)" value="${_esc(label)}">
+    <input class="gmail-url-inp"   type="url"  placeholder="https://mail.google.com/mail/u/0/…" value="${_esc(url)}">
+    <a class="gmail-open-btn" target="_blank"${url ? ` href="${_esc(url)}" style="display:inline-flex"` : ''}>✉</a>
+    <button type="button" class="gmail-remove-btn" title="Entfernen">×</button>
+  `;
+  const urlInp    = row.querySelector('.gmail-url-inp');
+  const openBtn   = row.querySelector('.gmail-open-btn');
+  const removeBtn = row.querySelector('.gmail-remove-btn');
+  urlInp.addEventListener('input', () => {
+    const v = urlInp.value.trim();
+    if (v.startsWith('https://')) {
+      openBtn.href = v;
+      openBtn.style.display = 'inline-flex';
+    } else {
+      openBtn.style.display = 'none';
+    }
+  });
+  removeBtn.addEventListener('click', () => row.remove());
+  list.appendChild(row);
+}
+
+function setGmailLinks(links) {
+  const list = document.getElementById('nf-gmail-links-list');
+  if (!list) return;
+  list.innerHTML = '';
+  (links || []).forEach(l => addGmailLinkRow(l.label || '', l.url || ''));
+}
+
+function getGmailLinks() {
+  const rows = document.querySelectorAll('#nf-gmail-links-list .gmail-link-row');
+  const result = [];
+  rows.forEach(row => {
+    const url   = row.querySelector('.gmail-url-inp')?.value.trim()   || '';
+    const label = row.querySelector('.gmail-label-inp')?.value.trim() || '';
+    if (url) result.push({ label, url });
+  });
+  return result;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 function showNotizPanel() {
   document.getElementById('detail-panel').classList.remove('hidden');
@@ -1496,20 +1567,6 @@ function showNotizPanel() {
   document.getElementById('notiz-detail').style.display = 'block';
   state.selected = null;
   notizPanelOpen = true;
-  // Live-Vorschau: Gmail-Link sofort als Button anzeigen wenn eingefügt
-  const gmailInput = document.getElementById('nf-gmail-link');
-  const gmailPreview = document.getElementById('nf-gmail-preview');
-  if (gmailInput && gmailPreview) {
-    gmailInput.oninput = () => {
-      const val = gmailInput.value.trim();
-      if (val.startsWith('https://mail.google.com/')) {
-        gmailPreview.href = val;
-        gmailPreview.style.display = 'inline-flex';
-      } else {
-        gmailPreview.style.display = 'none';
-      }
-    };
-  }
 }
 
 function hideNotizPanel() {
@@ -1546,7 +1603,7 @@ async function saveNotiz() {
     text:         document.getElementById('nf-text').value,
     status:       oldStatus,
     beschluss_id: beschlussId ? parseInt(beschlussId) : null,
-    gmail_link:   (document.getElementById('nf-gmail-link')?.value || '').trim(),
+    gmail_links:  getGmailLinks(),
   };
 
   try {
@@ -1643,7 +1700,7 @@ function renderNotizen() {
           ${n.text ? `<div class="notiz-preview">${(n.text).substring(0,100)}${n.text.length>100?'…':''}</div>` : '<div></div>'}
           <span style="font-size:11px;color:${statusColor(st)};white-space:nowrap;margin-left:8px">${statusLabel(st)}</span>
         </div>
-        ${n.gmail_link ? `<a class="notiz-gmail-btn" href="${n.gmail_link}" target="_blank" onclick="event.stopPropagation()">✉ E-Mail öffnen</a>` : ''}
+        ${(n.gmail_links||[]).map((l,i) => `<a class="notiz-gmail-btn" href="${l.url}" target="_blank" onclick="event.stopPropagation()">${l.label ? `✉ ${l.label}` : (i===0 && (n.gmail_links||[]).length===1 ? '✉ E-Mail öffnen' : `✉ Mail ${i+1}`)}</a>`).join('')}
       </div>`;
   }).join('');
 }
@@ -1675,7 +1732,7 @@ function renderBeschlussNotizen(beschlussId) {
       <div class="linked-notiz-betreff">${n.betreff||'(kein Betreff)'}</div>
       <div class="linked-notiz-meta">${n.datum||''} · ${shortHv(n.hv)}${n.beschluss_id ? ' · direkt verknüpft' : ' · Protokoll-Notiz'}</div>
       ${n.text ? `<div class="linked-notiz-preview">${n.text.substring(0,120)}${n.text.length>120?'…':''}</div>` : ''}
-      ${n.gmail_link ? `<a class="notiz-gmail-btn" href="${n.gmail_link}" target="_blank" onclick="event.stopPropagation()" style="margin-top:6px">✉ E-Mail öffnen</a>` : ''}
+      ${(n.gmail_links||[]).length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">${(n.gmail_links||[]).map((l,i) => `<a class="notiz-gmail-btn" href="${l.url}" target="_blank" onclick="event.stopPropagation()">${l.label ? `✉ ${l.label}` : (i===0 && (n.gmail_links||[]).length===1 ? '✉ E-Mail öffnen' : `✉ Mail ${i+1}`)}</a>`).join('')}</div>` : ''}
     </div>
   `).join('');
 }

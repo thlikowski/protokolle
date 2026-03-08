@@ -132,14 +132,32 @@ def api_get_data(db_path: Path) -> dict:
     }
 
 
+def _parse_gmail_links(raw: str | None) -> list:
+    """Parst gmail_link-Feld – unterstützt altes String-Format und neues JSON-Array."""
+    if not raw:
+        return []
+    raw = raw.strip()
+    if raw.startswith('['):
+        try:
+            return json.loads(raw)
+        except Exception:
+            return []
+    # Altes Format: einfacher URL-String → in Array-Format überführen
+    return [{'label': '', 'url': raw}]
+
+
 def api_get_notizen(db_path: Path) -> dict:
     conn = get_conn(db_path)
     rows = conn.execute(
         "SELECT * FROM notizen ORDER BY geaendert_am DESC"
     ).fetchall()
     conn.close()
-    # Als Dict {id: notiz} zurückgeben – gleiche Struktur wie localStorage
-    return {r['id']: dict(r) for r in rows}
+    result = {}
+    for r in rows:
+        d = dict(r)
+        d['gmail_links'] = _parse_gmail_links(d.get('gmail_link'))
+        result[d['id']] = d
+    return result
 
 
 def api_save_notiz(db_path: Path, data: dict) -> dict:
@@ -152,6 +170,10 @@ def api_save_notiz(db_path: Path, data: dict) -> dict:
         "SELECT erstellt_am FROM notizen WHERE id=?", (nid,)
     ).fetchone()
     erstellt_am = existing['erstellt_am'] if existing else now
+
+    # gmail_links als JSON-Array serialisieren (leere URL-Einträge rausfiltern)
+    gmail_links = [l for l in data.get('gmail_links', []) if l.get('url', '').strip()]
+    gmail_link_raw = json.dumps(gmail_links, ensure_ascii=False) if gmail_links else None
 
     conn.execute("""
         INSERT OR REPLACE INTO notizen
@@ -167,12 +189,13 @@ def api_save_notiz(db_path: Path, data: dict) -> dict:
         data.get('text'),
         data.get('status', 'offen'),
         data.get('beschluss_id'),
-        data.get('gmail_link'),
+        gmail_link_raw,
         erstellt_am,
         now,
     ))
     conn.commit()
     row = dict(conn.execute("SELECT * FROM notizen WHERE id=?", (nid,)).fetchone())
+    row['gmail_links'] = _parse_gmail_links(row.get('gmail_link'))
     conn.close()
     return row
 
