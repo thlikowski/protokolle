@@ -507,6 +507,24 @@ class WEGHandler(BaseHTTPRequestHandler):
 
         self.send_error_json(404, f'Unbekannter Endpunkt: {path}')
 
+    def do_HEAD(self):
+        """HEAD-Anfragen für Existenzprüfung (z.B. PDF-Auto-Load)"""
+        parsed = urlparse(self.path)
+        path   = parsed.path.rstrip('/')
+        if path.startswith('/output/'):
+            pdf_path = Path(__file__).parent / path.lstrip('/')
+            if pdf_path.exists() and pdf_path.suffix == '.pdf':
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/pdf')
+                self.send_header('Content-Length', str(pdf_path.stat().st_size))
+                self.end_headers()
+            else:
+                self.send_response(404)
+                self.end_headers()
+        else:
+            self.send_response(405)
+            self.end_headers()
+
     def do_POST(self):
         parsed = urlparse(self.path)
         path   = parsed.path.rstrip('/')

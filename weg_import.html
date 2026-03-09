@@ -449,7 +449,7 @@
         <select id="f-ergebnis">
           <option value="angenommen">✓ angenommen</option>
           <option value="abgelehnt">✗ abgelehnt</option>
-          <option value="">– unbekannt</option>
+          <option value="kein Beschluss">— kein Beschluss</option>
         </select>
       </div>
       <div class="field-group">
@@ -623,6 +623,7 @@ async function onProtoSelect() {
     document.getElementById('proto-info').textContent =
       `${p.weg_objekt} · ${p.versammlungs_datum} · ${p.hausverwaltung.replace(' Hausverwaltung GmbH','').replace(' / La Casa','')}`;
     document.getElementById('status-proto').textContent = p.dateiname;
+    tryAutoLoadPDF(p.dateiname);
   }
   loadBeschluesse();
 }
@@ -715,7 +716,7 @@ async function saveBeschluss() {
     ja_stimmen:      document.getElementById('f-ja').value.trim()   || null,
     nein_stimmen:    document.getElementById('f-nein').value.trim() || null,
     enthaltungen:    document.getElementById('f-enth').value.trim() || null,
-    ergebnis:        document.getElementById('f-ergebnis').value    || null,
+    ergebnis:        document.getElementById('f-ergebnis').value  || null,
     beirat_relevant: parseInt(document.getElementById('f-beirat').value),
     seite:           (() => { const v = document.getElementById('f-seite').value; return v !== '' ? parseInt(v) : null; })(),
   };
@@ -769,6 +770,21 @@ function loadPDF(input) {
   document.getElementById('pdf-drop').style.display  = 'none';
   document.getElementById('pdf-frame').style.display = 'block';
   document.getElementById('pdf-frame').src = URL.createObjectURL(file);
+}
+
+// Versucht, PDF automatisch vom Server zu laden (wenn vorhanden)
+async function tryAutoLoadPDF(dateiname) {
+  if (!dateiname) return;
+  const url = `${API}/output/${dateiname}`;
+  try {
+    const r = await fetch(url, { method: 'HEAD' });
+    if (r.ok) {
+      document.getElementById('pdf-drop').style.display  = 'none';
+      document.getElementById('pdf-frame').style.display = 'block';
+      document.getElementById('pdf-frame').src = url;
+    }
+    // PDF nicht vorhanden → Drop-Zone bleibt sichtbar
+  } catch(e) { /* Server nicht erreichbar → Drop-Zone bleibt */ }
 }
 
 // ── Protokoll-Modal ───────────────────────────────────────────────────────────
@@ -852,6 +868,7 @@ async function initFromURL() {
       document.getElementById('proto-info').textContent =
         `${proto.weg_objekt} · ${proto.versammlungs_datum} · ${proto.hausverwaltung.replace(' Hausverwaltung GmbH','').replace(' / La Casa','')}`;
       document.getElementById('status-proto').textContent = proto.dateiname;
+      tryAutoLoadPDF(proto.dateiname);   // PDF automatisch laden wenn vorhanden
 
       // Beschlüsse laden
       beschluesse = d.beschluesse.filter(b => b.protokoll_id == proto.id);
