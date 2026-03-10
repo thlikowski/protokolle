@@ -1142,10 +1142,13 @@ function filteredBeschluesse() {
       const kStatus = k ? k.status : (b.beirat_relevant ? 'offen' : 'erledigt');
       if (kStatus !== state.status) return false;
     }
-    // Tolerante Suche (OCR-Fehler, Umlaute, Leerzeichen)
+    // Tolerante Suche inkl. verknüpfter Notizen
     if (state.search) {
+      const notizTexts = Object.values(getNotizen())
+        .filter(n => n.beschluss_id === b.id)
+        .flatMap(n => [n.betreff, n.text]);
       const fields = [b.beschluss_text, b.top_nr, b.top_titel,
-                      b.weg_objekt, b.versammlungs_datum, b.top_titel];
+                      b.weg_objekt, b.versammlungs_datum, ...notizTexts];
       if (!fuzzySearchMatch(state.search, fields)) return false;
     }
     return true;
