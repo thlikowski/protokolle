@@ -7,16 +7,16 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg:       #0f1117;
-    --panel:    #161b27;
-    --border:   #252d3d;
-    --accent:   #3b82f6;
-    --accent2:  #10b981;
-    --warn:     #f59e0b;
-    --red:      #ef4444;
-    --text:     #e2e8f0;
-    --muted:    #64748b;
-    --input-bg: #1e2535;
+    --bg:       #0f0f0f;
+    --panel:    #1a1a1a;
+    --border:   #2a2a2a;
+    --accent:   #f0c040;
+    --accent2:  #50c070;
+    --warn:     #e07020;
+    --red:      #e05050;
+    --text:     #e0e0e0;
+    --muted:    #666;
+    --input-bg: #0f0f0f;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -35,7 +35,8 @@
     display: flex;
     align-items: center;
     gap: 16px;
-    padding: 10px 20px;
+    padding: 0 20px;
+    height: 52px;
     background: var(--panel);
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
@@ -67,7 +68,7 @@
     cursor: pointer; transition: opacity .15s;
   }
   .btn:hover { opacity: .85; }
-  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary { background: var(--accent); color: #000; }
   .btn-success { background: var(--accent2); color: #fff; }
   .btn-warn    { background: var(--warn); color: #000; }
   .btn-danger  { background: var(--red); color: #fff; }
@@ -84,7 +85,7 @@
 
   /* ── PDF Viewer ── */
   #pdf-panel {
-    background: #1a1a2e;
+    background: var(--bg);
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
@@ -237,7 +238,7 @@
     background: var(--panel);
   }
   .beschluss-card:hover { border-color: var(--accent); }
-  .beschluss-card.selected { border-color: var(--accent); background: #1e2d47; }
+  .beschluss-card.selected { border-color: var(--accent); background: rgba(240,192,64,0.08); }
   .bc-top {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 11px;
@@ -262,8 +263,8 @@
     border-radius: 10px;
     font-family: 'IBM Plex Mono', monospace;
   }
-  .bc-ergebnis.ang { background: #064e3b; color: #6ee7b7; }
-  .bc-ergebnis.abg { background: #450a0a; color: #fca5a5; }
+  .bc-ergebnis.ang { background: rgba(80,192,112,0.15); color: #50c070; }
+  .bc-ergebnis.abg { background: rgba(224,80,80,0.15);  color: #e05050; }
 
   .empty-list {
     text-align: center;
@@ -331,8 +332,8 @@
   /* BEARBEITEN: +Neu weg, Löschen sichtbar, Speichern blau, Header orange */
   .mode-edit #btn-new-wrap   { display: none; }
   .mode-edit #btn-delete     { display: inline-block !important; }
-  .mode-edit #btn-save       { background: var(--accent); }
-  .mode-edit .panel-hdr      { background: #2d1f0a; border-bottom-color: var(--warn); }
+  .mode-edit #btn-save       { background: var(--accent); color: #000; }
+  .mode-edit .panel-hdr      { background: #261200; border-bottom-color: var(--warn); }
   .mode-edit #form-title     { color: var(--warn); }
   .mode-edit #btn-new-header { display: inline-flex; }
 
