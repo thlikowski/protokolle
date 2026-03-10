@@ -377,6 +377,7 @@
       <option value="">– Protokoll wählen –</option>
     </select>
     <button class="btn btn-ghost" onclick="openNewProtoModal()">+ Neu</button>
+    <button class="btn btn-danger" id="btn-delete-proto" style="display:none" onclick="deleteProtokoll()">🗑 Protokoll löschen</button>
   </div>
   <span class="hdr-sep">│</span>
   <span style="font-size:11px;color:var(--muted)" id="proto-info">–</span>
@@ -515,8 +516,8 @@
       <input id="m-hv" type="text" placeholder="wird automatisch gesetzt">
     </div>
     <div class="field-group">
-      <label>Versammlungsdatum (YYYY-MM-DD)</label>
-      <input id="m-datum" type="text" placeholder="2017-10-19">
+      <label>Versammlungsdatum</label>
+      <input id="m-datum" type="date">
     </div>
     <div class="field-group">
       <label>Dateiname (PDF)</label>
@@ -546,8 +547,19 @@ let currentProtoId   = null;
 let currentBeschluss = null;
 let beschluesse      = [];
 
+// ── Neuer-Beschluss-Buttons aktivieren / deaktivieren ────────────────────────
+function updateNewBeschlussButtons() {
+  const off = !currentProtoId;
+  document.querySelectorAll('#btn-new-wrap .btn, #btn-new-header').forEach(b => {
+    b.disabled      = off;
+    b.style.opacity = off ? '0.35' : '';
+    b.style.cursor  = off ? 'not-allowed' : '';
+  });
+}
+
 // ── Modi: list / new / edit ───────────────────────────────────────────────────
 function setMode(mode) {
+  if (mode === 'new' && !currentProtoId) return;   // kein Protokoll → kein neuer Beschluss
   const fp = document.getElementById('form-panel');
   fp.classList.remove('mode-list', 'mode-new', 'mode-edit');
   fp.classList.add('mode-' + mode);
@@ -613,6 +625,8 @@ async function onProtoSelect() {
   currentProtoId = document.getElementById('proto-select').value || null;
   beschluesse = [];
   setMode('list');
+  updateNewBeschlussButtons();
+  document.getElementById('btn-delete-proto').style.display = currentProtoId ? 'inline-block' : 'none';
   if (!currentProtoId) {
     document.getElementById('proto-info').textContent = '–';
     return;
@@ -764,6 +778,28 @@ async function deleteBeschluss() {
   }
 }
 
+async function deleteProtokoll() {
+  if (!currentProtoId) return;
+  const sel  = document.getElementById('proto-select');
+  const name = sel.options[sel.selectedIndex]?.textContent || currentProtoId;
+  if (!confirm(`Protokoll „${name}" samt ALLEN Beschlüssen wirklich löschen?\nDies kann nicht rückgängig gemacht werden!`)) return;
+  try {
+    const r = await fetch(`${API}/api/import/protokoll/${currentProtoId}`, { method: 'DELETE' });
+    if (!r.ok) throw new Error(await r.text());
+    const res = await r.json();
+    currentProtoId = null;
+    beschluesse    = [];
+    setMode('list');
+    updateNewBeschlussButtons();
+    document.getElementById('proto-info').textContent = '–';
+    document.getElementById('btn-delete-proto').style.display = 'none';
+    await loadProtokolle();
+    alert(`Protokoll gelöscht (${res.beschluesse_deleted} Beschlüsse entfernt).`);
+  } catch(e) {
+    alert('Fehler beim Löschen: ' + e);
+  }
+}
+
 // ── PDF laden ─────────────────────────────────────────────────────────────────
 function loadPDF(input) {
   const file = input.files[0];
@@ -795,14 +831,21 @@ function onObjektChange() {
   document.getElementById('m-hv').value = HV_MAP[document.getElementById('m-objekt').value] || '';
 }
 
+function isoToGerman(iso) {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-');
+  return `${d}.${m}.${y}`;
+}
+
 async function saveProtokoll() {
-  const objekt = document.getElementById('m-objekt').value;
-  const datum  = document.getElementById('m-datum').value.trim();
-  if (!objekt || !datum) { alert('Objekt und Datum sind Pflicht.'); return; }
+  const objekt   = document.getElementById('m-objekt').value;
+  const datumIso = document.getElementById('m-datum').value.trim();
+  if (!objekt || !datumIso) { alert('Objekt und Datum sind Pflicht.'); return; }
+  const datum = isoToGerman(datumIso);          // → DD.MM.YYYY
   const datei = document.getElementById('m-dateiname').value.trim();
   const payload = {
-    dateiname:          datei || `${objekt.replace(/[^a-zA-Z]/g,'')}_${datum}.pdf`,
-    pdf_pfad:           `output/${datei || datum+'.pdf'}`,
+    dateiname:          datei || `${objekt.replace(/[^a-zA-Z]/g,'')}_${datumIso}.pdf`,
+    pdf_pfad:           `output/${datei || datumIso+'.pdf'}`,
     versammlungs_datum: datum,
     hausverwaltung:     document.getElementById('m-hv').value.trim(),
     weg_objekt:         objekt,
@@ -858,12 +901,19 @@ async function initFromURL() {
       sel.appendChild(o);
     });
 
+  // ?new=proto → Neues-Protokoll-Modal sofort öffnen
+  if (params.get('new') === 'proto') {
+    openNewProtoModal();
+    return;
+  }
+
   if (protoParam) {
     // Protokoll aus URL vorauswählen
     const proto = d.protokolle.find(p => p.id == protoParam);
     if (proto) {
       sel.value      = proto.id;
       currentProtoId = String(proto.id);
+      document.getElementById('btn-delete-proto').style.display = 'inline-block';
 
       // Protokoll-Info anzeigen
       document.getElementById('proto-info').textContent =
@@ -894,6 +944,7 @@ async function initFromURL() {
   } else {
     setMode('list');
   }
+  updateNewBeschlussButtons();
 }
 
 initFromURL();

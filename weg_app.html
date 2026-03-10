@@ -522,8 +522,9 @@
     border-radius: 8px;
     padding: 14px 16px;
     transition: border-color 0.15s;
+    cursor: pointer;
   }
-  .proto-card:hover { border-color: var(--border2); }
+  .proto-card:hover { border-color: var(--accent); }
   .proto-card .pc-objekt {
     font-family: var(--mono);
     font-size: 10px;
@@ -788,6 +789,7 @@
 
     <div class="result-bar">
       <span id="result-count" class="found">–</span>
+      <span id="proto-filter-tag" style="display:none; font-family:var(--mono); font-size:10px; color:var(--accent)"></span>
       <button class="clear-btn" onclick="clearFilters()">Filter zurücksetzen</button>
     </div>
 
@@ -808,6 +810,9 @@
 
     <!-- Protokolle Tab -->
     <div id="tab-protokolle" class="list-wrap" style="display:none">
+      <div style="padding:8px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:flex-end">
+        <a href="/import?new=proto" target="_blank" class="notiz-add-btn" style="font-size:12px; padding:5px 14px; text-decoration:none">+ Neues Protokoll</a>
+      </div>
       <div class="proto-grid" id="proto-grid"></div>
     </div>
 
@@ -987,6 +992,7 @@ let state = {
   year:      null,
   beirat:    false,
   status:    null,
+  protokoll: null,
   selected:  null,
 };
 
@@ -1114,7 +1120,7 @@ function toggleStatus(s) {
 }
 
 function clearFilters() {
-  state = { ...state, search: '', objekt: null, hv: null, year: null, beirat: false, status: null };
+  state = { ...state, search: '', objekt: null, hv: null, year: null, beirat: false, status: null, protokoll: null };
   document.getElementById('search').value = '';
   buildFilters();
   render();
@@ -1134,6 +1140,8 @@ function filteredBeschluesse() {
       const fileYear = parts.length >= 2 ? parts[1].substring(0,4) : '';
       if (fileYear !== state.year) return false;
     }
+    // Protokoll
+    if (state.protokoll && b.protokoll_id !== state.protokoll) return false;
     // Beirat
     if (state.beirat && !b.beirat_relevant) return false;
     // Status
@@ -1160,6 +1168,17 @@ function render() {
   const results = filteredBeschluesse();
   document.getElementById('result-count').textContent =
     `${results.length} Beschlüsse${state.search ? ` für „${state.search}"` : ''}`;
+
+  // Protokoll-Filter-Tag
+  const tag = document.getElementById('proto-filter-tag');
+  if (state.protokoll) {
+    const p = RAW.protokolle.find(x => x.id === state.protokoll);
+    tag.style.display = 'inline';
+    tag.textContent   = p ? `· ${p.weg_objekt}  ${p.versammlungs_datum}` : '';
+  } else {
+    tag.style.display = 'none';
+    tag.textContent   = '';
+  }
 
   if (state.tab === 'beschluesse') renderBeschluesse(results);
   if (state.tab === 'beirat')      renderBeirat();
@@ -1267,7 +1286,7 @@ function renderProtokolle() {
       n.objekt === p.weg_objekt && n.datum === p.versammlungs_datum
     ).length;
     return `
-      <div class="proto-card">
+      <div class="proto-card" onclick="openProtokoll(${p.id})">
         <div class="pc-objekt">${p.weg_objekt || '–'}</div>
         <div class="pc-datum">${p.versammlungs_datum || year}</div>
         <div class="pc-hv">${p.hausverwaltung || '–'}</div>
@@ -1280,6 +1299,12 @@ function renderProtokolle() {
         </div>
       </div>`;
   }).join('');
+}
+
+function openProtokoll(id) {
+  state.protokoll = id;
+  state.selected  = null;
+  switchTabDirect('beschluesse');
 }
 
 // ── Detail ─────────────────────────────────────────────────────────────────────

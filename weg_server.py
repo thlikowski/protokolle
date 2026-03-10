@@ -393,6 +393,24 @@ def api_delete_beschluss(db_path: Path, beschluss_id: int) -> bool:
     conn.close()
     return True
 
+
+def api_delete_protokoll(db_path: Path, protokoll_id: int) -> dict:
+    """Löscht ein Protokoll samt aller zugehörigen Beschlüsse und Edits."""
+    conn = get_conn(db_path)
+    ids = [r[0] for r in conn.execute(
+        "SELECT id FROM beschluesse WHERE protokoll_id=?", (protokoll_id,)
+    ).fetchall()]
+    for bid in ids:
+        conn.execute("DELETE FROM beschluss_edits WHERE beschluss_id=?", (bid,))
+    if ids:
+        conn.execute(
+            f"DELETE FROM beschluesse WHERE id IN ({','.join('?'*len(ids))})", ids
+        )
+    conn.execute("DELETE FROM protokolle WHERE id=?", (protokoll_id,))
+    conn.commit()
+    conn.close()
+    return {'ok': True, 'beschluesse_deleted': len(ids)}
+
 # ─── HTTP-Handler ─────────────────────────────────────────────────────────────
 
 class WEGHandler(BaseHTTPRequestHandler):
@@ -623,6 +641,17 @@ class WEGHandler(BaseHTTPRequestHandler):
                 beschluss_id = int(m.group(1))
                 api_delete_beschluss(self.db_path, beschluss_id)
                 self.send_json({'ok': True})
+            except Exception as e:
+                self.send_error_json(500, str(e))
+            return
+
+        # DELETE /api/import/protokoll/<id>
+        m = re.match(r'^/api/import/protokoll/(\d+)$', path)
+        if m:
+            try:
+                protokoll_id = int(m.group(1))
+                result = api_delete_protokoll(self.db_path, protokoll_id)
+                self.send_json(result)
             except Exception as e:
                 self.send_error_json(500, str(e))
             return
