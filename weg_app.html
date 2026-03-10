@@ -4,9 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WEG Protokolle</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
-
   :root {
     --bg:        #0f0f0f;
     --surface:   #1a1a1a;
@@ -346,6 +345,14 @@
     flex-direction: column;
   }
   .detail-panel.hidden { display: none; }
+
+  /* ── Scrollbars ── */
+  aside::-webkit-scrollbar,
+  .list-wrap::-webkit-scrollbar,
+  .detail-panel::-webkit-scrollbar { width: 4px; }
+  aside::-webkit-scrollbar-thumb,
+  .list-wrap::-webkit-scrollbar-thumb,
+  .detail-panel::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
   .detail-header {
     padding: 16px 20px 12px;
     border-bottom: 1px solid var(--border);
