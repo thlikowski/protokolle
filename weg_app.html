@@ -451,7 +451,6 @@
   }
   .status-btn:hover { border-color: var(--text); color: var(--text); }
   .status-btn.s-offen.active    { background: rgba(240,192,64,0.15); border-color: var(--accent); color: var(--accent); }
-  .status-btn.s-arbeit.active   { background: rgba(64,144,224,0.15); border-color: var(--blue); color: var(--blue); }
   .status-btn.s-erledigt.active { background: rgba(80,192,112,0.15); border-color: var(--green); color: var(--green); }
 
   .kommentar-area {
@@ -767,9 +766,6 @@
         <button class="filter-btn" onclick="toggleStatus('offen')">
           ○ Offen <span class="count" id="cnt-offen">0</span>
         </button>
-        <button class="filter-btn" onclick="toggleStatus('in_arbeit')">
-          ◑ In Arbeit <span class="count" id="cnt-arbeit">0</span>
-        </button>
         <button class="filter-btn" onclick="toggleStatus('erledigt')">
           ● Erledigt <span class="count" id="cnt-erledigt">0</span>
         </button>
@@ -860,7 +856,6 @@
         <div class="d-section-label">Status</div>
         <div class="status-row" id="d-status-row">
           <button class="status-btn s-offen"    onclick="setStatus('offen')">○ Offen</button>
-          <button class="status-btn s-arbeit"   onclick="setStatus('in_arbeit')">◑ In Arbeit</button>
           <button class="status-btn s-erledigt" onclick="setStatus('erledigt')">● Erledigt</button>
         </div>
       </div>
@@ -1112,7 +1107,7 @@ function toggleStatus(s) {
   const btns = document.querySelectorAll('#status-filters .filter-btn');
   btns.forEach(b => b.classList.remove('active'));
   if (state.status) {
-    const idx = ['offen','in_arbeit','erledigt'].indexOf(s);
+    const idx = ['offen','erledigt'].indexOf(s);
     if (idx >= 0) btns[idx].classList.add('active');
   }
   render();
@@ -1144,7 +1139,7 @@ function filteredBeschluesse() {
     // Status
     if (state.status) {
       const k = komm[b.id];
-      const kStatus = k ? k.status : 'offen';
+      const kStatus = k ? k.status : (b.beirat_relevant ? 'offen' : 'erledigt');
       if (kStatus !== state.status) return false;
     }
     // Tolerante Suche (OCR-Fehler, Umlaute, Leerzeichen)
@@ -1231,10 +1226,8 @@ function renderBeirat() {
   container.innerHTML = list.map(b => {
     const k = komm[b.id];
     const status = k ? k.status : 'offen';
-    const statusLabel = status === 'erledigt' ? '● Erledigt'
-                      : status === 'in_arbeit' ? '◑ In Arbeit' : '○ Offen';
-    const statusColor = status === 'erledigt' ? 'var(--green)'
-                      : status === 'in_arbeit' ? 'var(--blue)' : 'var(--accent)';
+    const statusLabel = status === 'erledigt' ? '● Erledigt' : '○ Offen';
+    const statusColor = status === 'erledigt' ? 'var(--green)' : 'var(--accent)';
     const selected = state.selected === b.id ? ' selected' : '';
     return `
       <div class="beschluss-row beirat-row${selected}" onclick="selectBeschluss(${b.id})">
@@ -1298,7 +1291,7 @@ function selectBeschluss(id) {
   const eb = effectiveB(b);
 
   const komm = getKommentare();
-  const k = komm[id] || { status: 'offen', kommentar: '' };
+  const k = komm[id] || { status: b.beirat_relevant ? 'offen' : 'erledigt', kommentar: '' };
 
   // Header
   document.getElementById('d-top').textContent  = `TOP ${b.top_nr}`;
@@ -1333,9 +1326,9 @@ function selectBeschluss(id) {
 
   // Status-Buttons: aus Notizen lesen
   const notizForBeschluss = Object.values(getNotizen()).find(n => n.beschluss_id === id);
-  const currentStatus = notizForBeschluss?.status || 'offen';
+  const currentStatus = notizForBeschluss?.status || (b.beirat_relevant ? 'offen' : 'erledigt');
   document.querySelectorAll('.status-btn').forEach(btn => btn.classList.remove('active'));
-  const statusMap = { 'offen': 's-offen', 'in_arbeit': 's-arbeit', 'erledigt': 's-erledigt' };
+  const statusMap = { 'offen': 's-offen', 'erledigt': 's-erledigt' };
   document.querySelector(`.${statusMap[currentStatus]}`)?.classList.add('active');
 
   // PDF-Link – Pfad: output/<dateiname>
@@ -1354,18 +1347,14 @@ function selectBeschluss(id) {
   if (state.tab === 'beirat') renderBeirat();
 }
 
-function setStatus(s) {
+async function setStatus(s) {
   if (!state.selected) return;
-  // Status-Änderung: Notiz für diesen Beschluss suchen (oder anlegen) und Status setzen
-  const all = getNotizen();
   const b = RAW.beschluesse.find(x => x.id === state.selected);
-  // Suche direkt verknüpfte Notiz
-  let notiz = Object.values(all).find(n => n.beschluss_id === state.selected);
+  let notiz = Object.values(getNotizen()).find(n => n.beschluss_id === state.selected);
   if (!notiz) {
-    // Neue Notiz anlegen mit Status
-    const id = 'auto_' + state.selected;
-    all[id] = {
-      id, status: s,
+    notiz = {
+      id: 'auto_' + state.selected,
+      status: s,
       datum: b?.versammlungs_datum || '',
       hv: b?.hausverwaltung || '',
       objekt: b?.weg_objekt || '',
@@ -1376,34 +1365,42 @@ function setStatus(s) {
       geaendert_am: new Date().toISOString(),
     };
   } else {
-    all[notiz.id].status = s;
-    all[notiz.id].geaendert_am = new Date().toISOString();
+    notiz.status = s;
+    notiz.geaendert_am = new Date().toISOString();
   }
-  saveNotizen(all);
+  let saved;
+  try {
+    saved = await saveNotizAPI(notiz);
+  } catch(e) {
+    console.error('Status speichern fehlgeschlagen:', e);
+    return;
+  }
 
+  // Status-Button sofort aktualisieren
   document.querySelectorAll('.status-btn').forEach(btn => btn.classList.remove('active'));
-  const statusMap = { 'offen': 's-offen', 'in_arbeit': 's-arbeit', 'erledigt': 's-erledigt' };
+  const statusMap = { 'offen': 's-offen', 'erledigt': 's-erledigt' };
   document.querySelector(`.${statusMap[s]}`)?.classList.add('active');
-
   updateStatusCounts();
-  renderBeschlussNotizen(state.selected);
-  renderNotizen();
   if (state.tab === 'beirat') renderBeirat();
+
+  // Formular öffnen – state.selected danach wiederherstellen,
+  // damit Abbrechen zurück zur Beschluss-Ansicht führt
+  const savedSelected = state.selected;
+  editNotiz(saved.id);
+  state.selected = savedSelected;
 }
 
 
 function updateStatusCounts() {
   const komm = getKommentare();
   const beiratIds = RAW.beschluesse.filter(b => b.beirat_relevant).map(b => b.id);
-  let offen = 0, arbeit = 0, erledigt = 0;
+  let offen = 0, erledigt = 0;
   for (const id of beiratIds) {
     const s = komm[id] ? komm[id].status : 'offen';
     if (s === 'offen')     offen++;
-    if (s === 'in_arbeit') arbeit++;
     if (s === 'erledigt')  erledigt++;
   }
-  document.getElementById('cnt-offen').textContent   = offen;
-  document.getElementById('cnt-arbeit').textContent  = arbeit;
+  document.getElementById('cnt-offen').textContent    = offen;
   document.getElementById('cnt-erledigt').textContent = erledigt;
 }
 
@@ -1586,6 +1583,8 @@ function hideNotizPanel() {
   notizPanelOpen = false;
   // Liste neu rendern damit selected-Klasse sofort verschwindet
   if (state.tab === 'notizen') renderNotizen();
+  // Beschluss-Notizen auffrischen falls noch ein Beschluss gewählt ist
+  if (state.selected) renderBeschlussNotizen(state.selected);
 }
 
 async function saveNotiz() {
@@ -1683,10 +1682,8 @@ function renderNotizen() {
     return;
   }
 
-  const statusLabel = s => s === 'erledigt' ? '● Erledigt'
-                         : s === 'in_arbeit' ? '◑ In Arbeit' : '○ Offen';
-  const statusColor = s => s === 'erledigt' ? 'var(--green)'
-                         : s === 'in_arbeit' ? 'var(--blue)' : 'var(--accent)';
+  const statusLabel = s => s === 'erledigt' ? '● Erledigt' : '○ Offen';
+  const statusColor = s => s === 'erledigt' ? 'var(--green)' : 'var(--accent)';
   const shortHv = h => (h||'').replace(' Hausverwaltung GmbH','').replace(' GmbH','').replace(' / La Casa','');
 
   container.innerHTML = list.map(n => {
