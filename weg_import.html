@@ -704,6 +704,10 @@ async function saveBeschluss() {
   const top = document.getElementById('f-top').value.trim();
   if (!top) { alert('TOP-Nummer ist Pflicht.'); return; }
 
+  const btnSave = document.getElementById('btn-save');
+  if (btnSave.disabled) return;
+  btnSave.disabled = true;
+
   const payload = {
     protokoll_id:    parseInt(currentProtoId),
     top_nr:          top,
@@ -741,6 +745,8 @@ async function saveBeschluss() {
     }
   } catch(e) {
     alert('Fehler beim Speichern: ' + e);
+  } finally {
+    btnSave.disabled = false;
   }
 }
 
