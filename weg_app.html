@@ -641,12 +641,13 @@
   .btn-danger { background: #c0392b; color: #fff; border: none; border-radius: 6px;
                 padding: 8px 16px; cursor: pointer; font-size: 13px; }
   .btn-danger:hover { opacity: 0.85; }
+  .btn-secondary { background: transparent; color: var(--muted); border: 1px solid var(--border2);
+                   border-radius: 6px; padding: 8px 16px; cursor: pointer; font-size: 13px; }
+  .btn-secondary:hover { color: var(--text); border-color: var(--muted); }
   .d-panel-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 16px; 
                    padding-bottom: 10px; border-bottom: 1px solid var(--border); }
 
 
-  /* Kommentar-Indikator in Beschluss-Zeile */
-  .col-notiz { font-size: 11px; color: var(--blue); text-align: center; }
   .col-edit { text-align: center; }
   .col-edit a {
     font-size: 11px; color: var(--muted); text-decoration: none;
@@ -802,7 +803,6 @@
         <span>Beschluss</span>
         <span style="text-align:right">Ergebnis</span>
         <span style="text-align:center">🔴</span>
-        <span style="text-align:center">💬</span>
         <span></span>
       </div>
       <div id="beschluss-list"></div>
@@ -917,6 +917,7 @@
     </div>
     <div class="notiz-actions">
       <button class="save-btn" onclick="saveNotiz()">💾 Speichern</button>
+      <button class="btn-secondary" onclick="hideNotizPanel()">✕ Abbrechen</button>
       <button class="btn-danger" id="notiz-delete-btn" onclick="deleteNotiz()" style="display:none">🗑 Löschen</button>
       <span class="save-note" id="notiz-save-note">✓ gespeichert</span>
     </div>
@@ -967,21 +968,54 @@ async function deleteNotizAPI(id) {
   if (_notizenCache) delete _notizenCache[id];
 }
 
-// Kompatibilitäts-Shims (werden von alten Aufrufen genutzt)
+// ── Kommentare-System (Status-only, unabhängig von Notizen) ──────────────────
+// Status wird in der kommentare-Tabelle gespeichert.
+// Format: { beschluss_id: { status, geaendert_am } }
+let _kommentareCache = null;
+
+async function loadKommentareFromAPI() {
+  try {
+    const r = await fetch('/api/kommentare');
+    if (r.ok) {
+      _kommentareCache = await r.json();
+    } else {
+      _kommentareCache = {};
+    }
+  } catch(e) {
+    console.error('Kommentare laden fehlgeschlagen:', e);
+    _kommentareCache = {};
+  }
+}
+
 function getKommentare() {
-  const n = getNotizen();
-  const komm = {};
-  for (const notiz of Object.values(n)) {
-    if (notiz.beschluss_id) {
-      komm[notiz.beschluss_id] = {
-        status: notiz.status || 'offen',
-        kommentar: notiz.text || '',
-      };
+  const komm = _kommentareCache || {};
+  // Fallback: für Beschlüsse ohne kommentare-Eintrag alten Notiz-Status verwenden
+  // (Rückwärtskompatibilität — kommentare-Einträge haben immer Vorrang)
+  const result = Object.assign({}, komm);
+  for (const n of Object.values(_notizenCache || {})) {
+    if (n.beschluss_id && !(n.beschluss_id in result)) {
+      result[n.beschluss_id] = { status: n.status || 'offen', geaendert_am: n.geaendert_am };
     }
   }
-  return komm;
+  return result;
 }
-function saveKommentare(data) { /* noop – alles läuft über saveNotizen */ }
+
+async function saveKommentarAPI(beschluss_id, status) {
+  // Lokalen Cache IMMER aktualisieren – auch wenn Server-Speicherung fehlschlägt
+  if (!_kommentareCache) _kommentareCache = {};
+  _kommentareCache[beschluss_id] = { status, geaendert_am: new Date().toISOString() };
+  try {
+    const r = await fetch('/api/kommentare', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ beschluss_id, status }),
+    });
+    if (r.ok) return await r.json();
+  } catch(e) {
+    console.error('Kommentar-API nicht erreichbar:', e);
+  }
+  return { beschluss_id, status, ok: true };
+}
 
 // ── State ──────────────────────────────────────────────────────────────────────
 let state = {
@@ -998,11 +1032,12 @@ let state = {
 
 // ── Init ───────────────────────────────────────────────────────────────────────
 async function init() {
-  // Daten + Notizen parallel laden
+  // Daten + Notizen + Kommentare parallel laden
   try {
     const [dataResp] = await Promise.all([
       fetch('/api/data'),
       loadNotizenFromAPI(),
+      loadKommentareFromAPI(),
     ]);
     if (!dataResp.ok) throw new Error(`HTTP ${dataResp.status}`);
     const data = await dataResp.json();
@@ -1214,14 +1249,6 @@ function renderBeschluesse(results) {
                         : eb.ergebnis === 'abgelehnt'  ? 'ergebnis-abgelehnt' : '';
     const selected = state.selected === b.id ? ' selected' : '';
     const beiratRow = b.beirat_relevant ? ' beirat-row' : '';
-    const komm = getKommentare();
-    const hasKomm = komm[b.id] && komm[b.id].kommentar;
-    const notizen = getNotizen();
-    const hasNotiz = Object.values(notizen).some(n =>
-      n.objekt === b.weg_objekt &&
-      n.datum && b.versammlungs_datum && n.datum === b.versammlungs_datum
-    );
-    const notizDot = hasKomm || hasNotiz ? '💬' : '';
     return `
       <div class="beschluss-row${selected}${beiratRow}" onclick="selectBeschluss(${b.id})">
         <div class="col-objekt">${b.weg_objekt || '–'}</div>
@@ -1230,7 +1257,6 @@ function renderBeschluesse(results) {
         <div class="col-text">${highlighted}</div>
         <div class="col-ergebnis ${ergebnisClass}">${eb.ergebnis || '–'}</div>
         <div class="col-beirat">${b.beirat_relevant ? '🔴' : ''}</div>
-        <div class="col-notiz">${notizDot}</div>
         <div class="col-edit"><a href="/import?proto=${b.protokoll_id}&beschluss=${b.id}" target="_blank" onclick="event.stopPropagation()" title="Bearbeiten">✎</a></div>
       </div>`;
   }).join('');
@@ -1319,7 +1345,7 @@ function selectBeschluss(id) {
   const eb = effectiveB(b);
 
   const komm = getKommentare();
-  const k = komm[id] || { status: b.beirat_relevant ? 'offen' : 'erledigt', kommentar: '' };
+  const k = komm[id] || { status: b.beirat_relevant ? 'offen' : 'erledigt' };
 
   // Header
   document.getElementById('d-top').textContent  = `TOP ${b.top_nr}`;
@@ -1352,12 +1378,10 @@ function selectBeschluss(id) {
     abstWrap.style.display = 'none';
   }
 
-  // Status-Buttons: aus Notizen lesen
-  const notizForBeschluss = Object.values(getNotizen()).find(n => n.beschluss_id === id);
-  const currentStatus = notizForBeschluss?.status || (b.beirat_relevant ? 'offen' : 'erledigt');
+  // Status-Buttons: aus kommentare-Cache lesen
   document.querySelectorAll('.status-btn').forEach(btn => btn.classList.remove('active'));
   const statusMap = { 'offen': 's-offen', 'erledigt': 's-erledigt' };
-  document.querySelector(`.${statusMap[currentStatus]}`)?.classList.add('active');
+  document.querySelector(`.${statusMap[k.status]}`)?.classList.add('active');
 
   // PDF-Link – Pfad: output/<dateiname>
   const pdfLink = document.getElementById('d-pdf-link');
@@ -1378,31 +1402,10 @@ function selectBeschluss(id) {
 async function setStatus(s) {
   if (!state.selected) return;
   const b = RAW.beschluesse.find(x => x.id === state.selected);
-  let notiz = Object.values(getNotizen()).find(n => n.beschluss_id === state.selected);
-  if (!notiz) {
-    notiz = {
-      id: 'auto_' + state.selected,
-      status: s,
-      datum: b?.versammlungs_datum || '',
-      hv: b?.hausverwaltung || '',
-      objekt: b?.weg_objekt || '',
-      betreff: b ? `TOP ${b.top_nr}: ${(b.top_titel||'').substring(0,60)}` : 'Status-Notiz',
-      text: '',
-      beschluss_id: state.selected,
-      erstellt_am: new Date().toISOString(),
-      geaendert_am: new Date().toISOString(),
-    };
-  } else {
-    notiz.status = s;
-    notiz.geaendert_am = new Date().toISOString();
-  }
-  let saved;
-  try {
-    saved = await saveNotizAPI(notiz);
-  } catch(e) {
-    console.error('Status speichern fehlgeschlagen:', e);
-    return;
-  }
+
+  // Status in kommentare-Tabelle speichern (kein Notiz-Zwang)
+  // Cache wird in saveKommentarAPI() immer zuerst aktualisiert – kein Early-Return nötig
+  await saveKommentarAPI(state.selected, s);
 
   // Status-Button sofort aktualisieren
   document.querySelectorAll('.status-btn').forEach(btn => btn.classList.remove('active'));
@@ -1411,22 +1414,43 @@ async function setStatus(s) {
   updateStatusCounts();
   if (state.tab === 'beirat') renderBeirat();
 
-  // Formular öffnen – state.selected danach wiederherstellen,
-  // damit Abbrechen zurück zur Beschluss-Ansicht führt
+  // Notiz-Formular optional öffnen (vorausgefüllt) – Abbrechen erstellt KEINE Notiz
   const savedSelected = state.selected;
-  editNotiz(saved.id);
+  const todayDE = new Date().toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric' });
+  const statusLabel = s === 'erledigt' ? 'Erledigt' : 'Offen gesetzt';
+  neueNotiz({
+    objekt:       b?.weg_objekt        || '',
+    hv:           b?.hausverwaltung    || '',
+    datum:        b?.versammlungs_datum || '',
+    beschluss_id: state.selected,
+    betreff:      b ? `TOP ${b.top_nr}: ${(b.top_titel || b.beschluss_text || '').substring(0,60)}` : '',
+    text:         `${statusLabel} am ${todayDE}`,
+  });
   state.selected = savedSelected;
 }
 
 
 function updateStatusCounts() {
   const komm = getKommentare();
-  const beiratIds = RAW.beschluesse.filter(b => b.beirat_relevant).map(b => b.id);
+  // Alle aktiven Filter anwenden (außer Status selbst) – damit der Zähler
+  // exakt das zeigt, was beim Klick auf den Filter-Button erscheint.
+  const filtered = RAW.beschluesse.filter(b => {
+    if (state.objekt    && b.weg_objekt     !== state.objekt)    return false;
+    if (state.hv        && b.hausverwaltung !== state.hv)        return false;
+    if (state.year) {
+      const fileYear = (b.dateiname || '').split('_')[1]?.substring(0, 4);
+      if (fileYear !== state.year) return false;
+    }
+    if (state.protokoll && b.protokoll_id   !== state.protokoll) return false;
+    if (state.beirat    && !b.beirat_relevant)                   return false;
+    return true;
+  });
   let offen = 0, erledigt = 0;
-  for (const id of beiratIds) {
-    const s = komm[id] ? komm[id].status : 'offen';
-    if (s === 'offen')     offen++;
-    if (s === 'erledigt')  erledigt++;
+  for (const b of filtered) {
+    const k = komm[b.id];
+    const s = k ? k.status : (b.beirat_relevant ? 'offen' : 'erledigt');
+    if (s === 'offen')    offen++;
+    if (s === 'erledigt') erledigt++;
   }
   document.getElementById('cnt-offen').textContent    = offen;
   document.getElementById('cnt-erledigt').textContent = erledigt;
@@ -1611,8 +1635,17 @@ function hideNotizPanel() {
   notizPanelOpen = false;
   // Liste neu rendern damit selected-Klasse sofort verschwindet
   if (state.tab === 'notizen') renderNotizen();
-  // Beschluss-Notizen auffrischen falls noch ein Beschluss gewählt ist
-  if (state.selected) renderBeschlussNotizen(state.selected);
+  // Beschluss-Kontext auffrischen
+  if (state.selected) {
+    renderBeschlussNotizen(state.selected);
+    // Status-Buttons aus kommentare-Cache neu setzen
+    const komm = getKommentare();
+    const b = RAW.beschluesse.find(x => x.id === state.selected);
+    const currentStatus = komm[state.selected]?.status || (b?.beirat_relevant ? 'offen' : 'erledigt');
+    document.querySelectorAll('.status-btn').forEach(btn => btn.classList.remove('active'));
+    const statusMap = { 'offen': 's-offen', 'erledigt': 's-erledigt' };
+    document.querySelector(`.${statusMap[currentStatus]}`)?.classList.add('active');
+  }
 }
 
 async function saveNotiz() {

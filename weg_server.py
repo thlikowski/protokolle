@@ -16,6 +16,8 @@ API-Endpunkte:
     GET  /api/notizen                       → alle Notizen
     POST /api/notizen                       → Notiz anlegen/aktualisieren
     DELETE /api/notizen/<id>               → Notiz löschen
+    GET  /api/kommentare                    → alle Status-Einträge {beschluss_id: {status}}
+    POST /api/kommentare                    → Status für Beschluss setzen (upsert)
     GET  /api/edits                         → alle manuellen Edits
     POST /api/edits/<beschluss_id>          → Edit speichern + beschluss_edits befüllen
     DELETE /api/edits/<beschluss_id>        → Edit löschen (Original wiederherstellen)
@@ -198,6 +200,46 @@ def api_save_notiz(db_path: Path, data: dict) -> dict:
     row['gmail_links'] = _parse_gmail_links(row.get('gmail_link'))
     conn.close()
     return row
+
+
+def api_get_kommentare(db_path: Path) -> dict:
+    """Alle Status-Einträge als {beschluss_id: {status, geaendert_am}}."""
+    conn = get_conn(db_path)
+    rows = conn.execute(
+        "SELECT beschluss_id, status, geaendert_am FROM kommentare ORDER BY geaendert_am ASC"
+    ).fetchall()
+    conn.close()
+    result = {}
+    for r in rows:
+        bid = r['beschluss_id']
+        result[bid] = {'status': r['status'], 'geaendert_am': r['geaendert_am']}
+    return result
+
+
+def api_save_kommentar(db_path: Path, data: dict) -> dict:
+    """Status für einen Beschluss setzen – upsert in kommentare-Tabelle."""
+    conn  = get_conn(db_path)
+    now   = datetime.now().isoformat()
+    bid   = int(data['beschluss_id'])
+    status = data.get('status', 'offen')
+
+    existing = conn.execute(
+        "SELECT id FROM kommentare WHERE beschluss_id=?", (bid,)
+    ).fetchone()
+
+    if existing:
+        conn.execute(
+            "UPDATE kommentare SET status=?, geaendert_am=? WHERE beschluss_id=?",
+            (status, now, bid)
+        )
+    else:
+        conn.execute(
+            "INSERT INTO kommentare (beschluss_id, status, erstellt_am, geaendert_am) VALUES (?,?,?,?)",
+            (bid, status, now, now)
+        )
+    conn.commit()
+    conn.close()
+    return {'beschluss_id': bid, 'status': status, 'ok': True}
 
 
 def api_delete_notiz(db_path: Path, nid: str) -> bool:
@@ -507,6 +549,13 @@ class WEGHandler(BaseHTTPRequestHandler):
                 self.send_error_json(500, str(e))
             return
 
+        if path == '/api/kommentare':
+            try:
+                self.send_json(api_get_kommentare(self.db_path))
+            except Exception as e:
+                self.send_error_json(500, str(e))
+            return
+
         if path == '/api/edits':
             # Alle Edits als {beschluss_id: [felder]}
             try:
@@ -551,6 +600,15 @@ class WEGHandler(BaseHTTPRequestHandler):
             try:
                 data   = self.read_body()
                 result = api_save_notiz(self.db_path, data)
+                self.send_json(result)
+            except Exception as e:
+                self.send_error_json(500, str(e))
+            return
+
+        if path == '/api/kommentare':
+            try:
+                data   = self.read_body()
+                result = api_save_kommentar(self.db_path, data)
                 self.send_json(result)
             except Exception as e:
                 self.send_error_json(500, str(e))
