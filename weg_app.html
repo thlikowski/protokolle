@@ -453,23 +453,6 @@
   .status-btn.s-offen.active    { background: rgba(240,192,64,0.15); border-color: var(--accent); color: var(--accent); }
   .status-btn.s-erledigt.active { background: rgba(80,192,112,0.15); border-color: var(--green); color: var(--green); }
 
-  .kommentar-area {
-    width: 100%;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 10px 12px;
-    color: var(--text);
-    font-family: var(--sans);
-    font-size: 13px;
-    line-height: 1.5;
-    resize: vertical;
-    min-height: 80px;
-    outline: none;
-    transition: border-color 0.15s;
-  }
-  .kommentar-area:focus { border-color: var(--accent); }
-  .kommentar-area::placeholder { color: var(--muted); }
 
   .save-btn {
     align-self: flex-start;
@@ -596,7 +579,6 @@
   .import-btn:hover { border-color: var(--accent); color: var(--accent); }
 
   /* ── Notizen Tab ──────────────────────────────────────────────────── */
-  .notiz-list { display: flex; flex-direction: column; gap: 10px; padding: 12px 0; }
   .notiz-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -612,7 +594,7 @@
   .notiz-betreff { font-weight: 600; font-size: 14px; color: var(--text); }
   .notiz-datum { font-size: 11px; color: var(--muted); white-space: nowrap; margin-left: 12px; }
   .notiz-meta { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
-  .notiz-preview { font-size: 12px; color: var(--text-secondary); white-space: pre-wrap; 
+  .notiz-preview { font-size: 12px; color: var(--muted); white-space: pre-wrap;
                    max-height: 48px; overflow: hidden; line-height: 1.5; }
   .notiz-add-btn {
     display: flex; align-items: center; gap: 8px;
@@ -670,7 +652,7 @@
   .linked-notiz-card:hover { border-left-color: var(--accent); }
   .linked-notiz-betreff { font-weight: 600; color: var(--text); margin-bottom: 3px; }
   .linked-notiz-meta { color: var(--muted); font-size: 11px; margin-bottom: 4px; }
-  .linked-notiz-preview { color: var(--text-secondary); line-height: 1.5;
+  .linked-notiz-preview { color: var(--muted); line-height: 1.5;
                            white-space: pre-wrap; max-height: 60px; overflow: hidden; }
   .linked-notiz-empty { color: var(--muted); font-size: 12px; font-style: italic; }
 
@@ -1338,8 +1320,6 @@ function selectBeschluss(id) {
   state.selected = id;
   hideNotizPanel();
 
-  // Import-Button wird in refreshDetailPanel() gesetzt
-
   const b  = RAW.beschluesse.find(x => x.id === id);
   if (!b) return;
   const eb = effectiveB(b);
@@ -1691,18 +1671,6 @@ async function saveNotiz() {
   if (state.selected) renderBeschlussNotizen(state.selected);
 }
 
-async function setNotizStatus(id, s) {
-  const all = getNotizen();
-  if (!all[id]) return;
-  all[id].status = s;  // optimistisch lokal updaten
-  try {
-    await saveNotizAPI(all[id]);
-  } catch(e) {
-    console.error('Status speichern fehlgeschlagen:', e);
-  }
-  renderNotizen();
-  updateStatusCounts();
-}
 
 async function deleteNotiz() {
   if (!notizEditId) return;
@@ -1890,41 +1858,6 @@ function fuzzySearchMatch(query, fields) {
 
 // Effektive Felder (kein Merge mehr nötig, Edits stehen direkt in RAW)
 function effectiveB(b) { return b; }
-function hasEdit(id)   { return !!(RAW.edits_meta && RAW.edits_meta[id] && RAW.edits_meta[id].length > 0); }
-
-
-// Detail-Panel mit effektiven Werten (Original + Überschreibung) befüllen
-function refreshDetailPanel() {
-  if (!state.selected) return;
-  const b  = RAW.beschluesse.find(x => x.id === state.selected);
-  const eb = effectiveB(b);
-
-  // Beschlusstext
-  document.getElementById('d-text').textContent = eb.beschluss_text || '(kein Text erkannt)';
-
-  
-
-  // Abstimmung
-  const abstWrap = document.getElementById('d-abstimmung-wrap');
-  if (eb.ja_stimmen || eb.nein_stimmen || eb.enthaltungen) {
-    abstWrap.style.display = 'block';
-    document.getElementById('d-abstimmung').innerHTML = `
-      <div class="abstimmung-cell">
-        <div class="a-label">JA</div>
-        <div class="a-val a-ja">${eb.ja_stimmen || '–'}</div>
-      </div>
-      <div class="abstimmung-cell">
-        <div class="a-label">NEIN</div>
-        <div class="a-val a-nein">${eb.nein_stimmen || '–'}</div>
-      </div>
-      <div class="abstimmung-cell">
-        <div class="a-label">Enthaltung</div>
-        <div class="a-val a-enth">${eb.enthaltungen || '–'}</div>
-      </div>`;
-  } else {
-    abstWrap.style.display = 'none';
-  }
-}
 
 // ── Start ──────────────────────────────────────────────────────────────────────
 init();
