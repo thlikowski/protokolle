@@ -532,7 +532,7 @@
 
 <script>
 // ── Config & State ───────────────────────────────────────────────────────────
-const API = 'http://localhost:8765';
+const API = window.location.origin;  // dynamisch – funktioniert auf jedem Port
 const HV_MAP = {
   'Am Frauentor':    'La Casa Hausverwaltung GmbH',
   'Dr.-Külz-Straße': 'MM-Consult',
