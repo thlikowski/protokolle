@@ -314,9 +314,6 @@
   .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
   .dot.ok { background: var(--accent2); }
   .dot.err { background: var(--red); }
-  /* Modi: list / new / edit */
-  #form-panel { position: relative; }
-
   /* ── Modi ── */
   /* LISTE: Formular + Actions versteckt, +Neu sichtbar */
   .mode-list .form-scroll  { display: none; }
@@ -361,7 +358,6 @@
     justify-content: center;
   }
   #btn-new-wrap .btn { font-size: 13px; padding: 10px 24px; width: 100%; }
-  #edit-indicator { display: none; }
 
 </style>
 </head>
@@ -584,21 +580,6 @@ function clearFields() {
     id => document.getElementById(id).value = '');
   document.getElementById('f-ergebnis').value = 'angenommen';
   document.getElementById('f-beirat').value   = '0';
-}
-
-// ── Server-Check ──────────────────────────────────────────────────────────────
-async function checkServer() {
-  try {
-    await fetch(`${API}/api/data`, { signal: AbortSignal.timeout(2000) });
-    document.getElementById('srv-dot').className      = 'dot ok';
-    document.getElementById('srv-status').textContent = 'Server verbunden';
-    await loadProtokolle();   // await damit initFromURL() danach Select-Options hat
-  } catch(e) {
-    document.getElementById('srv-dot').className      = 'dot err';
-    document.getElementById('srv-status').textContent = 'Server nicht erreichbar – python3 weg_server.py starten';
-    setTimeout(checkServer, 3000);
-    throw e;   // damit initFromURL() den Fehler merkt
-  }
 }
 
 // ── Protokolle laden ──────────────────────────────────────────────────────────
