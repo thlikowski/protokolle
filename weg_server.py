@@ -36,7 +36,7 @@ from urllib.parse import parse_qs, urlparse
 
 # ─── Konfiguration ────────────────────────────────────────────────────────────
 
-DEFAULT_PORT = 8766
+DEFAULT_PORT = 8765
 DEFAULT_DB   = Path(__file__).parent / 'weg_protokolle.db'
 HTML_FILE    = Path(__file__).parent / 'weg_app.html'
 
