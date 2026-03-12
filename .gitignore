@@ -6,5 +6,4 @@ output/
 analyse/
 .claude/
 .DS_Store
-*.command
 __pycache__/
