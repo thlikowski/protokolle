@@ -1,5 +1,6 @@
 *.pdf
 *.db
+src/weg_pdf_dump.py
 Backup/
 input/
 output/
