@@ -31,7 +31,6 @@ protokolle/
 ├── weg_app.html                     # Hauptanwendung (Browser)
 ├── weg_import.html                  # Import-Oberfläche
 ├── weg_protokolle.db                # SQLite-Datenbank (nicht in GitHub)
-├── weg_starter.py                   # Grafisches Startmenü (Tkinter)
 ├── requirements.txt                 # Python-Abhängigkeiten
 └── .gitignore
 ```
@@ -85,11 +84,6 @@ Startet den lokalen Webserver:
 python weg_server.py
 ```
 Die Anwendung ist dann unter [http://localhost:8765](http://localhost:8765) erreichbar.
-
-### Alternativ: Grafisches Startmenü
-```bash
-python weg_starter.py
-```
 
 ---
 
