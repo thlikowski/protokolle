@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Projektverzeichnis
-cd /Users/thomas/Entwicklung/Claude/protokolle
+# Projektverzeichnis (relativ zum Script-Speicherort)
+cd "$(dirname "$0")"
 
 # .venv aktivieren
 source .venv/bin/activate
