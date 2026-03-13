@@ -13,7 +13,7 @@ Die Anwendung ermöglicht das Scannen, Importieren und Verwalten von WEG-Versamm
 - Strukturierte Speicherung von Beschlüssen in einer SQLite-Datenbank
 - Weboberfläche zur Verwaltung, Suche und Filterung von Beschlüssen
 - Beirat- und Notizenverwaltung
-- Statusverfolgung (Offen / In Arbeit / Erledigt)
+- Statusverfolgung (Offen / Erledigt)
 
 ---
 
@@ -22,6 +22,7 @@ Die Anwendung ermöglicht das Scannen, Importieren und Verwalten von WEG-Versamm
 ```
 protokolle/
 ├── src/
+    ├── weg_pdf_dump.py              # extrahierten Rohtext eines PDFs
 │   ├── weg_protokoll_processor.py   # OCR / Textimport
 │   └── weg_to_db.py                 # Datenbank-Import
 ├── input/                           # Eingabe-PDFs (nicht in GitHub)
@@ -89,6 +90,18 @@ Die Anwendung ist dann unter [http://localhost:8765](http://localhost:8765) erre
 
 ### Alternativ: Startmenü im Terminal
 Doppelklick auf `WEG_Starter.command`
+
+---
+
+## Anpassung an eigene Protokoll-Layouts
+
+Die Beschluss-Extraktion in `src/weg_to_db.py` wurde auf die konkreten Protokoll-Layouts der hier verwendeten Hausverwaltungen (MM-Consult, La Casa) zugeschnitten. Das betrifft insbesondere:
+
+- **Reguläre Ausdrücke** zur Erkennung von TOP-Nummern, Beschlusstexten und Abstimmungsergebnissen
+- **Format A / Format B** — zwei verschiedene Erkennungsstrategien für unterschiedliche Layoutvarianten
+- **Dateinamens-Konvention** — `Objekt_JJJJ-MM-TT_bezeichnung.pdf`
+
+Wer die Anwendung für eigene WEGs nutzen möchte, muss diese Muster an die jeweiligen Protokollvorlagen anpassen. Empfehlung: `src/weg_pdf_dump.py` nutzen, um den extrahierten Rohtext eines PDFs zu prüfen, und die Regex-Muster in `weg_to_db.py` entsprechend anpassen.
 
 ---
 
