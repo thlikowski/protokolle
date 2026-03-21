@@ -578,6 +578,120 @@
   }
   .import-btn:hover { border-color: var(--accent); color: var(--accent); }
 
+  /* ── Belegprüfung Tab ────────────────────────────────────────────── */
+  .beleg-card {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .beleg-card:hover { background: var(--surface); }
+  .beleg-card.selected { background: rgba(240,192,64,0.07); }
+  .beleg-card-header {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 3px;
+  }
+  .beleg-termin {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  .beleg-objekt { font-size: 13px; color: var(--text); }
+  .beleg-dok-count {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    padding: 1px 7px;
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+  .beleg-meta { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .beleg-notiz-preview {
+    font-size: 12px; color: var(--muted); margin-top: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .beleg-dir-hint {
+    padding: 5px 20px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+  }
+  /* Dokumente im Formular */
+  .dok-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+  .dok-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+  }
+  .dok-name {
+    flex: 1;
+    font-size: 12px;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .dok-open-btn {
+    font-size: 11px;
+    padding: 2px 8px;
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+  }
+  .dok-open-btn.disabled { opacity: 0.3; cursor: default; pointer-events: none; }
+  .dok-del-btn {
+    font-size: 11px;
+    padding: 2px 6px;
+    background: none;
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .dok-del-btn:hover { color: var(--beirat); border-color: var(--beirat); }
+  .dok-add-row { display: flex; gap: 6px; margin-top: 4px; }
+  .dok-add-row input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 5px 8px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 12px;
+    outline: none;
+  }
+  .dok-add-row input:focus { border-color: var(--accent); }
+  .dok-add-btn {
+    padding: 5px 12px;
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .dok-add-btn:hover { opacity: 0.85; }
+
   /* ── Notizen Tab ──────────────────────────────────────────────────── */
   .notiz-card {
     background: var(--surface);
@@ -768,6 +882,7 @@
       <button class="tab" onclick="switchTab('notizen')">
         Notizen <span class="badge" id="tab-notizen-badge">0</span>
       </button>
+      <button class="tab" onclick="switchTab('belegpruefung')">Belegprüfung</button>
     </div>
 
     <div class="result-bar">
@@ -814,6 +929,18 @@
     <div id="tab-notizen" class="list-wrap" style="display:none">
       <button class="notiz-add-btn" onclick="neueNotiz()">＋ Neue Notiz</button>
       <div id="notizen-list"></div>
+    </div>
+
+    <!-- Belegprüfung Tab -->
+    <div id="tab-belegpruefung" class="list-wrap" style="display:none">
+      <div style="padding:10px 20px; border-bottom:1px solid var(--border)">
+        <button class="notiz-add-btn" onclick="neueBelegpruefung()" style="margin-bottom:0">＋ Neue Belegprüfung</button>
+      </div>
+      <div class="beleg-dir-hint" style="display:flex; align-items:center; gap:10px">
+        <span>Ablageordner: protokolle/belegpruefung/</span>
+        <button onclick="openBelegOrdner()" style="font-size:10px; padding:2px 8px; background:none; border:1px solid var(--border2); border-radius:3px; color:var(--muted); cursor:pointer" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">📂 Im Finder öffnen</button>
+      </div>
+      <div id="belegpruefung-list"></div>
     </div>
 
   </main>
@@ -902,6 +1029,46 @@
       <button class="btn-secondary" onclick="hideNotizPanel()">✕ Abbrechen</button>
       <button class="btn-danger" id="notiz-delete-btn" onclick="deleteNotiz()" style="display:none">🗑 Löschen</button>
       <span class="save-note" id="notiz-save-note">✓ gespeichert</span>
+    </div>
+  </div>
+  <!-- Belegprüfung-Detail / Formular (innerhalb detail-panel) -->
+  <div id="beleg-detail" style="display:none; padding:16px 20px; overflow-y:auto; height:100%">
+    <div class="d-panel-title" id="beleg-panel-title">Neue Belegprüfung</div>
+    <div class="notiz-form-grid">
+      <div class="form-field">
+        <label>Termin</label>
+        <input type="date" id="bf-termin">
+      </div>
+      <div class="form-field">
+        <label>Ort</label>
+        <input type="text" id="bf-ort" placeholder="z.B. Büro HV, vor Ort">
+      </div>
+      <div class="form-field">
+        <label>Hausverwaltung</label>
+        <select id="bf-hv"></select>
+      </div>
+      <div class="form-field">
+        <label>Objekt</label>
+        <select id="bf-objekt"></select>
+      </div>
+      <div class="form-field full">
+        <label>Notizen / Feststellungen</label>
+        <textarea id="bf-notiz" placeholder="Gesprächsnotizen, geprüfte Unterlagen, Feststellungen, Folgeaufgaben…"></textarea>
+      </div>
+    </div>
+    <div class="d-section-label" style="margin-top:4px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center">
+      <span>Dokumente &amp; Belege</span>
+    </div>
+    <div id="bf-dok-list" class="dok-list"></div>
+    <div class="dok-add-row">
+      <input type="file" id="bf-dok-file" multiple style="flex:1; color:var(--text); font-size:12px">
+      <button type="button" class="dok-add-btn" onclick="uploadBelegDateien()">📁 Hochladen</button>
+    </div>
+    <div class="notiz-actions" style="margin-top:16px">
+      <button class="save-btn" onclick="saveBelegpruefung()">💾 Speichern</button>
+      <button class="btn-secondary" onclick="hideBelegPanel()">✕ Abbrechen</button>
+      <button class="btn-danger" id="beleg-delete-btn" onclick="deleteBelegpruefung()" style="display:none">🗑 Löschen</button>
+      <span class="save-note" id="beleg-save-note">✓ gespeichert</span>
     </div>
   </div>
   </div>
@@ -1014,12 +1181,13 @@ let state = {
 
 // ── Init ───────────────────────────────────────────────────────────────────────
 async function init() {
-  // Daten + Notizen + Kommentare parallel laden
+  // Daten + Notizen + Kommentare + Belegprüfungen parallel laden
   try {
     const [dataResp] = await Promise.all([
       fetch('/api/data'),
       loadNotizenFromAPI(),
       loadKommentareFromAPI(),
+      loadBelegpruefungenFromAPI(),
     ]);
     if (!dataResp.ok) throw new Error(`HTTP ${dataResp.status}`);
     const data = await dataResp.json();
@@ -1442,11 +1610,14 @@ function switchTab(tab) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   event.target.classList.add('active');
 
-  document.getElementById('tab-beschluesse').style.display = tab === 'beschluesse' ? 'block' : 'none';
-  document.getElementById('tab-protokolle').style.display  = tab === 'protokolle'  ? 'block' : 'none';
-  document.getElementById('tab-beirat').style.display      = tab === 'beirat'      ? 'block' : 'none';
-  document.getElementById('tab-notizen').style.display     = tab === 'notizen'     ? 'block' : 'none';
-  if (tab !== 'notizen') hideNotizPanel();
+  document.getElementById('tab-beschluesse').style.display   = tab === 'beschluesse'   ? 'block' : 'none';
+  document.getElementById('tab-protokolle').style.display    = tab === 'protokolle'    ? 'block' : 'none';
+  document.getElementById('tab-beirat').style.display        = tab === 'beirat'        ? 'block' : 'none';
+  document.getElementById('tab-notizen').style.display       = tab === 'notizen'       ? 'block' : 'none';
+  document.getElementById('tab-belegpruefung').style.display = tab === 'belegpruefung' ? 'block' : 'none';
+  if (tab !== 'notizen')       hideNotizPanel();
+  if (tab !== 'belegpruefung') hideBelegPanel();
+  if (tab === 'belegpruefung') renderBelegpruefungen();
 
   render();
 }
@@ -1790,11 +1961,13 @@ function switchTabDirect(tab) {
   document.querySelectorAll('.tab').forEach(t => {
     if ((t.getAttribute('onclick')||'').includes(`'${tab}'`)) t.classList.add('active');
   });
-  document.getElementById('tab-beschluesse').style.display = tab === 'beschluesse' ? 'block' : 'none';
-  document.getElementById('tab-protokolle').style.display  = tab === 'protokolle'  ? 'block' : 'none';
-  document.getElementById('tab-beirat').style.display      = tab === 'beirat'      ? 'block' : 'none';
-  document.getElementById('tab-notizen').style.display     = tab === 'notizen'     ? 'block' : 'none';
-  if (tab !== 'notizen') hideNotizPanel();
+  document.getElementById('tab-beschluesse').style.display   = tab === 'beschluesse'   ? 'block' : 'none';
+  document.getElementById('tab-protokolle').style.display    = tab === 'protokolle'    ? 'block' : 'none';
+  document.getElementById('tab-beirat').style.display        = tab === 'beirat'        ? 'block' : 'none';
+  document.getElementById('tab-notizen').style.display       = tab === 'notizen'       ? 'block' : 'none';
+  document.getElementById('tab-belegpruefung').style.display = tab === 'belegpruefung' ? 'block' : 'none';
+  if (tab !== 'notizen')       hideNotizPanel();
+  if (tab !== 'belegpruefung') hideBelegPanel();
   render();
 }
 
@@ -1850,6 +2023,274 @@ function fuzzySearchMatch(query, fields) {
   const words = query.trim().split(/\s+/).filter(Boolean);
   const haystack = fields.join(' ');
   return words.every(w => fuzzyContains(w, haystack));
+}
+
+// ── Belegprüfung-System ──────────────────────────────────────────────────────
+
+let _belegCache = [];
+let belegEditId   = null;
+let belegPanelOpen = false;
+
+async function loadBelegpruefungenFromAPI() {
+  try {
+    const r = await fetch('/api/belegpruefungen');
+    _belegCache = await r.json();
+  } catch(e) {
+    console.error('Belegprüfungen laden fehlgeschlagen:', e);
+    _belegCache = [];
+  }
+}
+
+
+function fillBelegSelects(objekt, hv) {
+  const hvSel  = document.getElementById('bf-hv');
+  const objSel = document.getElementById('bf-objekt');
+  if (!hvSel || !objSel) return;
+  const hvs  = [...new Set(RAW.protokolle.map(p => p.hausverwaltung).filter(Boolean))].sort();
+  const objs = [...new Set(RAW.protokolle.map(p => p.weg_objekt).filter(Boolean))].sort();
+  const shortHv = h => h.replace(' Hausverwaltung GmbH','').replace(' GmbH','').replace(' / La Casa','');
+  hvSel.innerHTML  = '<option value="">– Hausverwaltung –</option>'
+    + hvs.map(h => `<option value="${h}">${shortHv(h)}</option>`).join('');
+  objSel.innerHTML = '<option value="">– Objekt –</option>'
+    + objs.map(o => `<option value="${o}">${o}</option>`).join('');
+  if (hv)     hvSel.value  = hv;
+  if (objekt) objSel.value = objekt;
+}
+
+function renderBelegDokumente(dokumente) {
+  const container = document.getElementById('bf-dok-list');
+  if (!container) return;
+  if (!dokumente || !dokumente.length) {
+    container.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:4px 0">Noch keine Dokumente hochgeladen.</div>';
+    return;
+  }
+  container.innerHTML = dokumente.map(d => {
+    const openBtn = d.link
+      ? `<a class="dok-open-btn" href="${_esc(d.link)}" target="_blank" onclick="event.stopPropagation()">↗ Öffnen</a>`
+      : `<span class="dok-open-btn disabled">↗ Öffnen</span>`;
+    return `
+      <div class="dok-row">
+        <span class="dok-name">📄 ${_esc(d.name||'')}</span>
+        ${openBtn}
+        <button class="dok-del-btn" onclick="removeBelegDokument(${d.id})" title="Entfernen">×</button>
+      </div>`;
+  }).join('');
+}
+
+function neueBelegpruefung() {
+  belegEditId = null;
+  fillBelegSelects('', '');
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('bf-termin').value = today;
+  document.getElementById('bf-ort').value    = '';
+  document.getElementById('bf-notiz').value  = '';
+  document.getElementById('bf-dok-file').value = '';
+  renderBelegDokumente([]);
+  document.getElementById('beleg-panel-title').textContent = 'Neue Belegprüfung';
+  document.getElementById('beleg-delete-btn').style.display = 'none';
+  document.getElementById('beleg-save-note').style.opacity  = '0';
+  showBelegPanel();
+  renderBelegpruefungen();
+}
+
+function editBelegpruefung(id) {
+  const bp = _belegCache.find(b => b.id === id);
+  if (!bp) return;
+  belegEditId = id;
+  fillBelegSelects(bp.objekt, bp.hausverwaltung);
+  document.getElementById('bf-termin').value = toIsoDate(bp.termin || '');
+  document.getElementById('bf-ort').value    = bp.ort   || '';
+  document.getElementById('bf-notiz').value  = bp.notiz || '';
+  document.getElementById('bf-dok-file').value = '';
+  renderBelegDokumente(bp.dokumente || []);
+  document.getElementById('beleg-panel-title').textContent = 'Belegprüfung bearbeiten';
+  document.getElementById('beleg-delete-btn').style.display = 'inline-block';
+  document.getElementById('beleg-save-note').style.opacity  = '0';
+  showBelegPanel();
+  renderBelegpruefungen();
+}
+
+function showBelegPanel() {
+  document.getElementById('detail-panel').classList.remove('hidden');
+  document.querySelector('.detail-header').style.display = 'none';
+  document.querySelector('.detail-body').style.display   = 'none';
+  document.getElementById('notiz-detail').style.display  = 'none';
+  document.getElementById('beleg-detail').style.display  = 'block';
+  state.selected  = null;
+  belegPanelOpen  = true;
+  notizPanelOpen  = false;
+}
+
+function hideBelegPanel() {
+  const dh = document.querySelector('.detail-header');
+  const db = document.querySelector('.detail-body');
+  if (dh) dh.style.display = '';
+  if (db) db.style.display = '';
+  document.getElementById('beleg-detail').style.display = 'none';
+  belegEditId    = null;
+  belegPanelOpen = false;
+  if (state.tab === 'belegpruefung') renderBelegpruefungen();
+}
+
+async function saveBelegpruefung() {
+  const termin = document.getElementById('bf-termin').value.trim();
+  const objekt = document.getElementById('bf-objekt').value.trim();
+  const hv     = document.getElementById('bf-hv').value.trim();
+  const ort    = document.getElementById('bf-ort').value.trim();
+  const notiz  = document.getElementById('bf-notiz').value;
+
+  const data = { termin, objekt, hausverwaltung: hv, ort, notiz };
+  let saved;
+  try {
+    if (belegEditId) {
+      const r = await fetch(`/api/belegpruefungen/${belegEditId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      saved = await r.json();
+    } else {
+      const r = await fetch('/api/belegpruefungen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      saved = await r.json();
+      belegEditId = saved.id;
+      document.getElementById('beleg-delete-btn').style.display = 'inline-block';
+      document.getElementById('beleg-panel-title').textContent  = 'Belegprüfung bearbeiten';
+    }
+    // Cache aktualisieren
+    const idx = _belegCache.findIndex(b => b.id === saved.id);
+    if (idx >= 0) {
+      saved.dokumente = _belegCache[idx].dokumente; // Dokumente aus lokalem Cache behalten
+      _belegCache[idx] = saved;
+    } else {
+      saved.dokumente = saved.dokumente || [];
+      _belegCache.unshift(saved);
+    }
+  } catch(e) {
+    alert('Speichern fehlgeschlagen: ' + e);
+    return;
+  }
+  const note = document.getElementById('beleg-save-note');
+  note.style.opacity = '1';
+  setTimeout(() => note.style.opacity = '0', 2000);
+  renderBelegpruefungen();
+}
+
+async function deleteBelegpruefung() {
+  if (!belegEditId) return;
+  if (!confirm('Belegprüfung und alle Dokumente wirklich löschen?')) return;
+  try {
+    await fetch(`/api/belegpruefungen/${belegEditId}`, { method: 'DELETE' });
+    _belegCache = _belegCache.filter(b => b.id !== belegEditId);
+  } catch(e) {
+    alert('Löschen fehlgeschlagen: ' + e);
+    return;
+  }
+  document.getElementById('detail-panel').classList.add('hidden');
+  hideBelegPanel();
+}
+
+async function uploadBelegDateien() {
+  const input = document.getElementById('bf-dok-file');
+  if (!input.files.length) { alert('Bitte zuerst eine Datei auswählen.'); return; }
+
+  // Noch nicht gespeichert → erst Belegprüfung anlegen
+  if (!belegEditId) {
+    await saveBelegpruefung();
+    if (!belegEditId) return;
+  }
+
+  const btn = document.querySelector('.dok-add-btn');
+  btn.disabled  = true;
+  btn.textContent = '⏳ Wird hochgeladen…';
+
+  for (const file of Array.from(input.files)) {
+    try {
+      const b64 = await new Promise((res, rej) => {
+        const reader = new FileReader();
+        reader.onload  = e => res(e.target.result.split(',')[1]);
+        reader.onerror = rej;
+        reader.readAsDataURL(file);
+      });
+      const r = await fetch(`/api/belegpruefungen/${belegEditId}/upload`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: file.name, data: b64 }),
+      });
+      const dok = await r.json();
+      const bp  = _belegCache.find(b => b.id === belegEditId);
+      if (bp) {
+        if (!bp.dokumente) bp.dokumente = [];
+        bp.dokumente.push(dok);
+        renderBelegDokumente(bp.dokumente);
+      }
+    } catch(e) {
+      alert(`Fehler bei „${file.name}": ${e}`);
+    }
+  }
+
+  input.value = '';
+  btn.disabled    = false;
+  btn.textContent = '📁 Hochladen';
+  renderBelegpruefungen();
+}
+
+async function removeBelegDokument(dokId) {
+  if (!confirm('Dokument wirklich entfernen?')) return;
+  try {
+    await fetch(`/api/belegpruefungen/${belegEditId}/dokumente/${dokId}`, { method: 'DELETE' });
+    const bp = _belegCache.find(b => b.id === belegEditId);
+    if (bp) {
+      bp.dokumente = (bp.dokumente || []).filter(d => d.id !== dokId);
+      renderBelegDokumente(bp.dokumente);
+    }
+    renderBelegpruefungen();
+  } catch(e) {
+    alert('Löschen fehlgeschlagen: ' + e);
+  }
+}
+
+async function openBelegOrdner() {
+  try {
+    const r = await fetch('/api/belegpruefung/open-folder');
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      alert('Fehler: ' + (err.error || r.status));
+    }
+  } catch(e) {
+    alert('Server nicht erreichbar – bitte Server neu starten.');
+  }
+}
+
+function renderBelegpruefungen() {
+  const container = document.getElementById('belegpruefung-list');
+  if (!container) return;
+
+  const list = [..._belegCache].sort((a,b) => (b.termin||'').localeCompare(a.termin||''));
+
+  if (!list.length) {
+    container.innerHTML = '<div class="empty">Noch keine Belegprüfungen erfasst.<br><span style="font-size:11px">Klicke auf „＋ Neue Belegprüfung" um den ersten Termin anzulegen.</span></div>';
+    return;
+  }
+
+  const shortHv = h => (h||'').replace(' Hausverwaltung GmbH','').replace(' GmbH','').replace(' / La Casa','');
+  container.innerHTML = list.map(bp => {
+    const isSelected = (belegPanelOpen && belegEditId === bp.id) ? ' selected' : '';
+    const dokCount   = (bp.dokumente || []).length;
+    return `
+      <div class="beleg-card${isSelected}" onclick="editBelegpruefung(${bp.id})">
+        <div class="beleg-card-header">
+          <span class="beleg-termin">${toDisplayDate(bp.termin||'')}</span>
+          <span class="beleg-objekt">${bp.objekt||'–'}</span>
+          ${dokCount ? `<span class="beleg-dok-count">📄 ${dokCount} Dokument${dokCount!==1?'e':''}</span>` : ''}
+        </div>
+        <div class="beleg-meta">${shortHv(bp.hausverwaltung||'')}${bp.ort ? ` · ${bp.ort}` : ''}</div>
+        ${bp.notiz ? `<div class="beleg-notiz-preview">${bp.notiz.substring(0,140)}${bp.notiz.length>140?'…':''}</div>` : ''}
+      </div>`;
+  }).join('');
 }
 
 // ── Manueller Editor (API-basiert) ───────────────────────────────────────────

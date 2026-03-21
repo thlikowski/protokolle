@@ -21,12 +21,22 @@ API-Endpunkte:
     GET  /api/edits                         → alle manuellen Edits
     POST /api/edits/<beschluss_id>          → Edit speichern + beschluss_edits befüllen
     DELETE /api/edits/<beschluss_id>        → Edit löschen (Original wiederherstellen)
+    GET  /api/belegpruefungen               → alle Belegprüfungen mit Dokumenten
+    POST /api/belegpruefungen               → neue Belegprüfung anlegen
+    PUT  /api/belegpruefungen/<id>          → Belegprüfung bearbeiten
+    DELETE /api/belegpruefungen/<id>        → Belegprüfung löschen
+    POST /api/belegpruefungen/<id>/upload              → Datei hochladen → belegpruefung/
+    POST /api/belegpruefungen/<id>/dokumente           → Dokument (Link) hinzufügen
+    DELETE /api/belegpruefungen/<id>/dokumente/<dok_id> → Dokument löschen
 """
 
 import argparse
+import base64
 import json
+import mimetypes
 import re
 import sqlite3
+import subprocess
 import sys
 import webbrowser
 from datetime import datetime
@@ -36,9 +46,10 @@ from urllib.parse import parse_qs, urlparse
 
 # ─── Konfiguration ────────────────────────────────────────────────────────────
 
-DEFAULT_PORT = 8765
-DEFAULT_DB   = Path(__file__).parent / 'weg_protokolle.db'
-HTML_FILE    = Path(__file__).parent / 'weg_app.html'
+DEFAULT_PORT  = 8765
+DEFAULT_DB    = Path(__file__).parent / 'weg_protokolle.db'
+HTML_FILE     = Path(__file__).parent / 'weg_app.html'
+BELEG_DIR     = Path(__file__).parent / 'belegpruefung'
 
 # ─── Datenbankzugriff ─────────────────────────────────────────────────────────
 
@@ -76,6 +87,24 @@ def get_conn(db_path: Path) -> sqlite3.Connection:
             gmail_link   TEXT,
             erstellt_am  TEXT NOT NULL,
             geaendert_am TEXT
+        );
+        -- Belegprüfungen
+        CREATE TABLE IF NOT EXISTS belegpruefungen (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            termin          TEXT,
+            objekt          TEXT,
+            hausverwaltung  TEXT,
+            ort             TEXT,
+            notiz           TEXT,
+            erstellt_am     TEXT NOT NULL,
+            geaendert_am    TEXT
+        );
+        CREATE TABLE IF NOT EXISTS belegpruefung_dokumente (
+            id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+            belegpruefung_id   INTEGER REFERENCES belegpruefungen(id),
+            name               TEXT,
+            link               TEXT,
+            erstellt_am        TEXT NOT NULL
         );
     """)
     conn.commit()
@@ -453,6 +482,126 @@ def api_delete_protokoll(db_path: Path, protokoll_id: int) -> dict:
     conn.close()
     return {'ok': True, 'beschluesse_deleted': len(ids)}
 
+# ─── Belegprüfung-API ─────────────────────────────────────────────────────────
+
+def api_get_belegpruefungen(db_path: Path) -> list:
+    """Alle Belegprüfungen mit zugehörigen Dokumenten."""
+    conn = get_conn(db_path)
+    rows = conn.execute(
+        "SELECT * FROM belegpruefungen ORDER BY termin DESC"
+    ).fetchall()
+    result = []
+    for r in rows:
+        bp = dict(r)
+        bp['dokumente'] = [dict(d) for d in conn.execute(
+            "SELECT * FROM belegpruefung_dokumente WHERE belegpruefung_id=? ORDER BY id",
+            (bp['id'],)
+        ).fetchall()]
+        result.append(bp)
+    conn.close()
+    return result
+
+
+def api_save_belegpruefung(db_path: Path, data: dict) -> dict:
+    """Neue Belegprüfung anlegen."""
+    conn = get_conn(db_path)
+    now  = datetime.now().isoformat()
+    cur  = conn.execute("""
+        INSERT INTO belegpruefungen (termin, objekt, hausverwaltung, ort, notiz, erstellt_am, geaendert_am)
+        VALUES (?,?,?,?,?,?,?)
+    """, (
+        data.get('termin'),
+        data.get('objekt'),
+        data.get('hausverwaltung'),
+        data.get('ort'),
+        data.get('notiz'),
+        now, now,
+    ))
+    conn.commit()
+    row = dict(conn.execute(
+        "SELECT * FROM belegpruefungen WHERE id=?", (cur.lastrowid,)
+    ).fetchone())
+    row['dokumente'] = []
+    conn.close()
+    return row
+
+
+def api_update_belegpruefung(db_path: Path, bp_id: int, data: dict) -> dict:
+    """Bestehende Belegprüfung aktualisieren."""
+    conn = get_conn(db_path)
+    now  = datetime.now().isoformat()
+    conn.execute("""
+        UPDATE belegpruefungen
+        SET termin=?, objekt=?, hausverwaltung=?, ort=?, notiz=?, geaendert_am=?
+        WHERE id=?
+    """, (
+        data.get('termin'),
+        data.get('objekt'),
+        data.get('hausverwaltung'),
+        data.get('ort'),
+        data.get('notiz'),
+        now, bp_id,
+    ))
+    conn.commit()
+    row = dict(conn.execute(
+        "SELECT * FROM belegpruefungen WHERE id=?", (bp_id,)
+    ).fetchone())
+    row['dokumente'] = [dict(d) for d in conn.execute(
+        "SELECT * FROM belegpruefung_dokumente WHERE belegpruefung_id=? ORDER BY id", (bp_id,)
+    ).fetchall()]
+    conn.close()
+    return row
+
+
+def api_delete_belegpruefung(db_path: Path, bp_id: int) -> bool:
+    """Belegprüfung + alle Dokumente löschen."""
+    conn = get_conn(db_path)
+    conn.execute("DELETE FROM belegpruefung_dokumente WHERE belegpruefung_id=?", (bp_id,))
+    conn.execute("DELETE FROM belegpruefungen WHERE id=?", (bp_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+
+def api_add_belegdokument(db_path: Path, bp_id: int, data: dict) -> dict:
+    """Dokument zu einer Belegprüfung hinzufügen."""
+    conn = get_conn(db_path)
+    now  = datetime.now().isoformat()
+    cur  = conn.execute("""
+        INSERT INTO belegpruefung_dokumente (belegpruefung_id, name, link, erstellt_am)
+        VALUES (?,?,?,?)
+    """, (bp_id, data.get('name'), data.get('link') or None, now))
+    conn.commit()
+    row = dict(conn.execute(
+        "SELECT * FROM belegpruefung_dokumente WHERE id=?", (cur.lastrowid,)
+    ).fetchone())
+    conn.close()
+    return row
+
+
+def api_delete_belegdokument(db_path: Path, dok_id: int) -> bool:
+    """Einzelnes Dokument löschen."""
+    conn = get_conn(db_path)
+    conn.execute("DELETE FROM belegpruefung_dokumente WHERE id=?", (dok_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+
+def api_upload_belegdokument(db_path: Path, bp_id: int, data: dict) -> dict:
+    """
+    Datei-Upload: base64-kodierte Datei in BELEG_DIR speichern,
+    Datensatz in belegpruefung_dokumente anlegen.
+    """
+    BELEG_DIR.mkdir(exist_ok=True)
+    name     = re.sub(r'[^\w.\-]', '_', data['name'])  # Dateinamen bereinigen
+    raw      = base64.b64decode(data['data'])
+    dest     = BELEG_DIR / name
+    dest.write_bytes(raw)
+    link     = f'/belegpruefung/{name}'
+    return api_add_belegdokument(db_path, bp_id, {'name': data['name'], 'link': link})
+
+
 # ─── HTTP-Handler ─────────────────────────────────────────────────────────────
 
 class WEGHandler(BaseHTTPRequestHandler):
@@ -520,6 +669,23 @@ class WEGHandler(BaseHTTPRequestHandler):
             self.wfile.write(html)
             return
 
+        # ── Beleg-Dateien ausliefern ─────────────────────────────────────────
+        if path.startswith('/belegpruefung/'):
+            file_path = Path(__file__).parent / path.lstrip('/')
+            if file_path.exists() and file_path.is_file():
+                ct, _ = mimetypes.guess_type(str(file_path))
+                data = file_path.read_bytes()
+                self.send_response(200)
+                self.send_header('Content-Type', ct or 'application/octet-stream')
+                self.send_header('Content-Length', str(len(data)))
+                self.send_header('Content-Disposition',
+                                 f'inline; filename="{file_path.name}"')
+                self.end_headers()
+                self.wfile.write(data)
+            else:
+                self.send_error_json(404, 'Datei nicht gefunden')
+            return
+
         # ── PDF-Dateien ausliefern ───────────────────────────────────────────
         if path.startswith('/output/'):
             pdf_path = Path(__file__).parent / path.lstrip('/')
@@ -568,6 +734,22 @@ class WEGHandler(BaseHTTPRequestHandler):
                 for r in rows:
                     result.setdefault(str(r['beschluss_id']), []).append(r['feld'])
                 self.send_json(result)
+            except Exception as e:
+                self.send_error_json(500, str(e))
+            return
+
+        if path == '/api/belegpruefungen':
+            try:
+                self.send_json(api_get_belegpruefungen(self.db_path))
+            except Exception as e:
+                self.send_error_json(500, str(e))
+            return
+
+        if path == '/api/belegpruefung/open-folder':
+            try:
+                BELEG_DIR.mkdir(exist_ok=True)
+                subprocess.Popen(['open', str(BELEG_DIR)])
+                self.send_json({'ok': True})
             except Exception as e:
                 self.send_error_json(500, str(e))
             return
@@ -646,6 +828,40 @@ class WEGHandler(BaseHTTPRequestHandler):
                 self.send_error_json(500, str(e))
             return
 
+        # POST /api/belegpruefungen
+        if path == '/api/belegpruefungen':
+            try:
+                data   = self.read_body()
+                result = api_save_belegpruefung(self.db_path, data)
+                self.send_json(result)
+            except Exception as e:
+                self.send_error_json(500, str(e))
+            return
+
+        # POST /api/belegpruefungen/<id>/upload  (base64-Datei-Upload)
+        m = re.match(r'^/api/belegpruefungen/(\d+)/upload$', path)
+        if m:
+            try:
+                bp_id  = int(m.group(1))
+                data   = self.read_body()
+                result = api_upload_belegdokument(self.db_path, bp_id, data)
+                self.send_json(result)
+            except Exception as e:
+                self.send_error_json(500, str(e))
+            return
+
+        # POST /api/belegpruefungen/<id>/dokumente
+        m = re.match(r'^/api/belegpruefungen/(\d+)/dokumente$', path)
+        if m:
+            try:
+                bp_id  = int(m.group(1))
+                data   = self.read_body()
+                result = api_add_belegdokument(self.db_path, bp_id, data)
+                self.send_json(result)
+            except Exception as e:
+                self.send_error_json(500, str(e))
+            return
+
         self.send_error_json(404, f'Unbekannter Endpunkt: {path}')
 
     def do_PUT(self):
@@ -659,6 +875,18 @@ class WEGHandler(BaseHTTPRequestHandler):
                 beschluss_id = int(m.group(1))
                 data         = self.read_body()
                 result       = api_update_beschluss(self.db_path, beschluss_id, data)
+                self.send_json(result)
+            except Exception as e:
+                self.send_error_json(500, str(e))
+            return
+
+        # PUT /api/belegpruefungen/<id>
+        m = re.match(r'^/api/belegpruefungen/(\d+)$', path)
+        if m:
+            try:
+                bp_id  = int(m.group(1))
+                data   = self.read_body()
+                result = api_update_belegpruefung(self.db_path, bp_id, data)
                 self.send_json(result)
             except Exception as e:
                 self.send_error_json(500, str(e))
@@ -714,6 +942,28 @@ class WEGHandler(BaseHTTPRequestHandler):
                 self.send_error_json(500, str(e))
             return
 
+        # DELETE /api/belegpruefungen/<id>
+        m = re.match(r'^/api/belegpruefungen/(\d+)$', path)
+        if m:
+            try:
+                bp_id = int(m.group(1))
+                api_delete_belegpruefung(self.db_path, bp_id)
+                self.send_json({'ok': True})
+            except Exception as e:
+                self.send_error_json(500, str(e))
+            return
+
+        # DELETE /api/belegpruefungen/<id>/dokumente/<dok_id>
+        m = re.match(r'^/api/belegpruefungen/(\d+)/dokumente/(\d+)$', path)
+        if m:
+            try:
+                dok_id = int(m.group(2))
+                api_delete_belegdokument(self.db_path, dok_id)
+                self.send_json({'ok': True})
+            except Exception as e:
+                self.send_error_json(500, str(e))
+            return
+
         self.send_error_json(404, f'Unbekannter Endpunkt: {path}')
 
 
@@ -748,6 +998,9 @@ Beispiele:
 
     # DB-Pfad in Handler-Klasse setzen (einfachste thread-safe Methode)
     WEGHandler.db_path = db_path
+
+    # Beleg-Ordner anlegen falls nicht vorhanden
+    BELEG_DIR.mkdir(exist_ok=True)
 
     # Tabellen anlegen falls noch nicht vorhanden
     conn = get_conn(db_path)
