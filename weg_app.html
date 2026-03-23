@@ -1368,8 +1368,6 @@ function filteredBeschluesse() {
 // ── Render ─────────────────────────────────────────────────────────────────────
 function render() {
   const results = filteredBeschluesse();
-  document.getElementById('result-count').textContent =
-    `${results.length} Beschlüsse${state.search ? ` für „${state.search}"` : ''}`;
 
   // Protokoll-Filter-Tag
   const tag = document.getElementById('proto-filter-tag');
@@ -1382,11 +1380,22 @@ function render() {
     tag.textContent   = '';
   }
 
-  if (state.tab === 'beschluesse') renderBeschluesse(results);
-  if (state.tab === 'beirat')      renderBeirat();
-  if (state.tab === 'protokolle')  renderProtokolle();
-  if (state.tab === 'notizen')     renderNotizen();
-  updateStatusCounts();
+  if (state.tab === 'beschluesse') {
+    document.getElementById('result-count').textContent =
+      `${results.length} Beschlüsse${state.search ? ` für „${state.search}"` : ''}`;
+    renderBeschluesse(results);
+    updateStatusCounts();
+  } else if (state.tab === 'beirat') {
+    document.getElementById('result-count').textContent = '';
+    renderBeirat();
+    updateStatusCounts();
+  } else if (state.tab === 'protokolle') {
+    document.getElementById('result-count').textContent = '';
+    renderProtokolle();
+  } else if (state.tab === 'notizen') {
+    document.getElementById('result-count').textContent = '';
+    renderNotizen();  // aktualisiert cnt-offen/cnt-erledigt selbst
+  }
 }
 
 function highlight(text, q) {
@@ -1926,6 +1935,11 @@ function renderNotizen() {
   if (state.objekt) list = list.filter(n => n.objekt === state.objekt);
   if (state.hv)     list = list.filter(n => n.hv === state.hv);
   if (state.year)   list = list.filter(n => (n.datum||'').endsWith(state.year));
+
+  // Status-Zähler aktualisieren (vor Status-Filter, damit beide Zahlen stimmen)
+  document.getElementById('cnt-offen').textContent    = list.filter(n => (n.status||'offen') === 'offen').length;
+  document.getElementById('cnt-erledigt').textContent = list.filter(n => (n.status||'offen') === 'erledigt').length;
+
   if (state.status) list = list.filter(n => (n.status||'offen') === state.status);
   if (q)            list = list.filter(n =>
     fuzzySearchMatch(state.search, [n.betreff, n.text, n.datum, n.hv, n.objekt]));
