@@ -717,6 +717,13 @@
     font-size: 13px; margin-bottom: 14px;
   }
   .notiz-add-btn:hover { opacity: 0.85; }
+  .notiz-status-toggle {
+    padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: 1.5px solid; background: transparent;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .notiz-status-toggle[data-status="offen"]    { color: var(--accent); border-color: var(--accent); }
+  .notiz-status-toggle[data-status="erledigt"] { color: var(--green);  border-color: var(--green);  }
 
   /* Notiz-Detail / Formular im rechten Panel */
   .notiz-form-grid {
@@ -989,7 +996,13 @@
 
     </div>
   <!-- Notiz-Detail / Formular (innerhalb detail-panel) -->
-  <div id="notiz-detail" style="display:none; padding:16px 20px; overflow-y:auto;">
+  <div id="notiz-detail" style="display:none; padding:16px 20px; overflow-y:auto; position:relative;">
+    <input type="hidden" id="nf-status" value="offen">
+    <button type="button" id="nf-status-toggle" onclick="toggleNotizFormStatus()"
+      style="position:absolute; top:14px; right:16px;
+             padding:5px 14px; border-radius:14px; font-size:12px; font-weight:700;
+             cursor:pointer; border:2px solid var(--accent); color:var(--accent);
+             background:rgba(255,168,0,0.08); white-space:nowrap; z-index:10">○ Offen</button>
     <div class="d-panel-title" id="notiz-panel-title">Neue Notiz</div>
     <div class="notiz-form-grid">
       <div class="form-field">
@@ -1690,6 +1703,7 @@ function neueNotiz(prefill) {
   document.getElementById('nf-betreff').value = p.betreff || '';
   document.getElementById('nf-text').value    = p.text || '';
   setGmailLinks(p.gmail_links || []);
+  _setNotizStatusToggle(p.status || 'offen');
 
   document.getElementById('notiz-panel-title').textContent = 'Neue Notiz';
   document.getElementById('notiz-delete-btn').style.display = 'none';
@@ -1708,6 +1722,7 @@ function editNotiz(id) {
   document.getElementById('nf-betreff').value = n.betreff || '';
   document.getElementById('nf-text').value    = n.text || '';
   setGmailLinks(n.gmail_links || []);
+  _setNotizStatusToggle(n.status || 'offen');
   document.getElementById('notiz-panel-title').textContent = 'Notiz bearbeiten';
   document.getElementById('notiz-delete-btn').style.display = 'inline-block';
   document.getElementById('notiz-save-note').style.opacity = '0';
@@ -1807,9 +1822,7 @@ async function saveNotiz() {
   if (!objekt)  { alert('Bitte Objekt wählen.'); return; }
   if (!betreff) { alert('Bitte Betreff eingeben.'); return; }
 
-  const all = getNotizen();
   const beschlussId = document.getElementById('nf-beschluss-id')?.value;
-  const oldStatus = all[notizEditId]?.status || 'offen';
   const id = notizEditId || ('n_' + Date.now());
 
   const notizData = {
@@ -1819,7 +1832,7 @@ async function saveNotiz() {
     objekt,
     betreff,
     text:         document.getElementById('nf-text').value,
-    status:       oldStatus,
+    status:       document.getElementById('nf-status').value || 'offen',
     beschluss_id: beschlussId ? parseInt(beschlussId) : null,
     gmail_links:  getGmailLinks(),
   };
@@ -1856,6 +1869,42 @@ async function deleteNotiz() {
   document.getElementById('detail-panel').classList.add('hidden');
   hideNotizPanel();
   updateNotizBadge();
+  renderNotizen();
+  if (state.selected) renderBeschlussNotizen(state.selected);
+}
+
+// ── Notiz-Status-Hilfsfunktionen ─────────────────────────────────────────────
+
+function _setNotizStatusToggle(st) {
+  const input = document.getElementById('nf-status');
+  const btn   = document.getElementById('nf-status-toggle');
+  if (!input || !btn) return;
+  input.value = st;
+  if (st === 'erledigt') {
+    btn.textContent = '● Erledigt';
+    btn.style.borderColor = 'var(--green)';
+    btn.style.color       = 'var(--green)';
+    btn.style.background  = 'rgba(80,192,112,0.1)';
+  } else {
+    btn.textContent = '○ Offen';
+    btn.style.borderColor = 'var(--accent)';
+    btn.style.color       = 'var(--accent)';
+    btn.style.background  = 'rgba(255,168,0,0.08)';
+  }
+}
+
+function toggleNotizFormStatus() {
+  const input = document.getElementById('nf-status');
+  _setNotizStatusToggle(input.value === 'offen' ? 'erledigt' : 'offen');
+}
+
+async function toggleNotizStatus(id, event) {
+  event.stopPropagation();
+  const n = getNotizen()[id];
+  if (!n) return;
+  const next = (n.status || 'offen') === 'offen' ? 'erledigt' : 'offen';
+  await saveNotizAPI({ ...n, status: next });
+  if (notizEditId === id) _setNotizStatusToggle(next);
   renderNotizen();
   if (state.selected) renderBeschlussNotizen(state.selected);
 }
@@ -1902,7 +1951,7 @@ function renderNotizen() {
         <div class="notiz-meta">${n.objekt} · ${shortHv(n.hv)}${beschlussHint}</div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
           ${n.text ? `<div class="notiz-preview">${(n.text).substring(0,100)}${n.text.length>100?'…':''}</div>` : '<div></div>'}
-          <span style="font-size:11px;color:${statusColor(st)};white-space:nowrap;margin-left:8px">${statusLabel(st)}</span>
+          <button onclick="toggleNotizStatus('${n.id}',event)" style="font-size:11px;color:${statusColor(st)};white-space:nowrap;margin-left:8px;background:none;border:1px solid ${statusColor(st)};border-radius:10px;padding:1px 8px;cursor:pointer;font-weight:600">${statusLabel(st)}</button>
         </div>
         ${(n.gmail_links||[]).map((l,i) => `<a class="notiz-gmail-btn" href="${l.url}" target="_blank" onclick="event.stopPropagation()">${l.label ? `✉ ${l.label}` : (i===0 && (n.gmail_links||[]).length===1 ? '✉ E-Mail öffnen' : `✉ Mail ${i+1}`)}</a>`).join('')}
       </div>`;
