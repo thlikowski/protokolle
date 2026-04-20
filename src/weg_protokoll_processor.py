@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-WEG Protokoll Processor (v2 – ocrmypdf)
-========================================
-Verarbeitet gescannte Eigentümerversammlungs-Protokolle:
-- OCR + Textlayer: ocrmypdf (deutlich bessere Qualität als reines pytesseract)
+WEG Protokoll Processor (v3 – auto-detect)
+===========================================
+Erkennt automatisch ob ein PDF maschinenlesbar ist oder ein Scan:
+- Maschinenlesbar → OCR wird übersprungen, nur Beirat-Highlights werden ergänzt
+- Scan           → OCR + Textlayer via ocrmypdf (oder pytesseract als Fallback)
 - Farbige Hervorhebung von Beirat-Begriffen (via pytesseract HOCR für Positionen)
 
 Voraussetzungen (einmalig installieren):
@@ -73,6 +74,35 @@ def detect_tesseract_lang() -> str:
     except Exception:
         pass
     return 'eng'
+
+
+# ─── Maschinenlesbarkeit erkennen ────────────────────────────────────────────
+
+def is_machine_readable(pdf_path: Path, min_chars_per_page: int = 100) -> bool:
+    """
+    Prüft ob das PDF bereits einen vollwertigen Textlayer hat.
+    Strategie: erste 3 Seiten per pypdf extrahieren – wenn Ø ≥ min_chars_per_page
+    Zeichen vorhanden sind, gilt das PDF als maschinenlesbar.
+    """
+    try:
+        reader      = PdfReader(str(pdf_path))
+        total_pages = len(reader.pages)
+        if total_pages == 0:
+            return False
+        sample = min(3, total_pages)
+        total_chars = sum(
+            len((reader.pages[i].extract_text() or '').strip())
+            for i in range(sample)
+        )
+        avg = total_chars / sample
+        if avg >= min_chars_per_page:
+            print(f"  → Maschinenlesbar erkannt ({avg:.0f} Zeichen/Seite Ø)")
+            return True
+        print(f"  → Scan erkannt ({avg:.0f} Zeichen/Seite Ø) → OCR wird durchgeführt")
+        return False
+    except Exception as e:
+        print(f"  ⚠  Lesbarkeits-Check fehlgeschlagen: {e} → OCR als Fallback")
+        return False
 
 
 # ─── OCR via ocrmypdf ─────────────────────────────────────────────────────────
@@ -266,7 +296,12 @@ def process_pdf(input_path: Path, output_path: Path, lang: str, use_ocrmypdf: bo
     print(f"  Ausgabe:  {output_path.name}")
     print(f"{'─'*60}")
 
-    if use_ocrmypdf:
+    print(f"[0/?] Lesbarkeits-Check...")
+    if is_machine_readable(input_path):
+        # Maschinenlesbar → Textlayer bereits vorhanden, nur Highlights ergänzen
+        print(f"[1/2] Beirat-Hervorhebungen (kein OCR nötig)...")
+        add_highlights(input_path, output_path, lang)
+    elif use_ocrmypdf:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_ocr = Path(tmp) / 'ocr.pdf'
             print(f"[1/4] Einlesen ({input_path.stat().st_size//1024} KB)...")

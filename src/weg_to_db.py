@@ -545,12 +545,16 @@ def normalize_top_nr_b(raw: str) -> str:
     return raw
 
 
+def _clean_stimmen(val: str) -> str:
+    """Leert Werte die nur aus Füllpunkten bestehen ('.......' → '')."""
+    return '' if re.match(r'^[.\s]+$', val) else val
+
+
 def extract_abstimmung_b(block: str) -> tuple:
     """Extrahiert Abstimmungsergebnis aus Format-B Block."""
     ja = nein = enth = ergebnis = ''
 
     # JA-Stimmen Zahl - Format: "771/771" oder "5.897,72/10.000" oder "846/846"
-    # Achtung: OCR macht manchmal "771..." mit Punkten → nur bis zum ersten Leerzeichen
     m_ja = re.search(r'J\s*A\s*[-–]?\s*Stimmen\s+([0-9][0-9.,/]*[0-9])', block, re.I)
     if m_ja:
         ja = m_ja.group(1).strip()
@@ -558,24 +562,25 @@ def extract_abstimmung_b(block: str) -> tuple:
     # NEIN-Stimmen (oft leer/Punkte bei 0)
     m_nein = re.search(r'NEIN\s*[-–]?\s*St[iI]mmen\s+([0-9.,/]+)', block, re.I)
     if m_nein:
-        nein = m_nein.group(1).strip()
+        nein = _clean_stimmen(m_nein.group(1).strip())
 
     # Enthaltungen
     m_enth = re.search(r'Stimmenthaltungen\s+([0-9.,/]+)', block, re.I)
     if m_enth:
-        enth = m_enth.group(1).strip()
+        enth = _clean_stimmen(m_enth.group(1).strip())
 
-    # Ergebnis
-    if RE_ABSTIMMUNG_B.search(block):
-        ergebnis = 'angenommen'
-    elif RE_ABSTIMMUNG_B_ABGELEHNT.search(block):
+    # Ergebnis – abgelehnt zuerst prüfen, da "□ angenommen\nx abgelehnt"
+    # sonst fälschlich als angenommen erkannt wird
+    if RE_ABSTIMMUNG_B_ABGELEHNT.search(block):
         ergebnis = 'abgelehnt'
+    elif RE_ABSTIMMUNG_B.search(block):
+        ergebnis = 'angenommen'
     elif re.search(r'vertagt|zur[uü]ck\s*ge\s*zogen', block, re.I):
         ergebnis = 'vertagt'
-    elif re.search(r'angenommen', block, re.I):
-        ergebnis = 'angenommen'
     elif re.search(r'abgelehnt', block, re.I):
         ergebnis = 'abgelehnt'
+    elif re.search(r'angenommen', block, re.I):
+        ergebnis = 'angenommen'
 
     return ja, nein, enth, ergebnis
 
@@ -760,8 +765,15 @@ def process_pdf(pdf_path: Path, db_path: Path,
         conn.close()
         return {'skipped': True, 'reason': 'ocr_failed'}
 
-    # OCR-Textreinigung via LLM (pro Seite, um Token-Limit einzuhalten)
-    if use_llm:
+    # Maschinenlesbar erkennen: Ø Zeichen pro Seite (erste 3 Seiten)
+    sample = min(3, len(pages))
+    avg_chars = sum(len(t.strip()) for _, t in pages[:sample]) / sample
+    machine_readable = avg_chars >= 200
+    if machine_readable:
+        print(f"  ℹ  Maschinenlesbar ({avg_chars:.0f} Zeichen/Seite Ø) – LLM-OCR-Bereinigung übersprungen")
+
+    # OCR-Textreinigung via LLM – nur für Scans, nicht für maschinenlesbare PDFs
+    if use_llm and not machine_readable:
         print(f"  LLM:    OCR-Bereinigung ({len(pages)} Seiten)...", end=' ', flush=True)
         cleaned_pages = []
         for nr, page_text in pages:

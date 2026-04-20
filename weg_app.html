@@ -1282,11 +1282,15 @@ function buildFilters() {
     hvDiv.appendChild(btn);
   }
 
-  // Jahre aus Dateinamen
-  const years = [...new Set(RAW.protokolle.map(p => {
-    const parts = p.dateiname.split('_');
-    return parts.length >= 2 ? parts[1].substring(0,4) : null;
-  }).filter(Boolean))].sort();
+  // Jahre aus Dateinamen + aktuelles Jahr immer einschließen
+  const currentYear = new Date().getFullYear().toString();
+  const years = [...new Set([
+    ...RAW.protokolle.map(p => {
+      const parts = p.dateiname.split('_');
+      return parts.length >= 2 ? parts[1].substring(0,4) : null;
+    }),
+    currentYear
+  ].filter(Boolean))].sort();
   const yearDiv = document.getElementById('year-filters');
   yearDiv.innerHTML = '';
   for (const y of years) {
@@ -1934,7 +1938,21 @@ function renderNotizen() {
   // Filter
   if (state.objekt) list = list.filter(n => n.objekt === state.objekt);
   if (state.hv)     list = list.filter(n => n.hv === state.hv);
-  if (state.year)   list = list.filter(n => (n.datum||'').endsWith(state.year));
+  if (state.year)   list = list.filter(n => {
+    // Jahr aus Datum extrahieren (egal ob TT.MM.JJJJ oder JJJJ-MM-TT)
+    const notizYear = (n.datum||'').match(/\d{4}/)?.[0] || '';
+    if (notizYear === state.year) return true;
+    // auch treffen wenn verknüpfter Beschluss aus dem Filterjahr stammt
+    if (n.beschluss_id) {
+      const b = (RAW.beschluesse||[]).find(b => b.id == n.beschluss_id);
+      if (b) {
+        const parts = (b.dateiname||'').split('_');
+        const fileYear = parts.length >= 2 ? parts[1].substring(0,4) : '';
+        if (fileYear === state.year) return true;
+      }
+    }
+    return false;
+  });
 
   // Status-Zähler aktualisieren (vor Status-Filter, damit beide Zahlen stimmen)
   document.getElementById('cnt-offen').textContent    = list.filter(n => (n.status||'offen') === 'offen').length;
