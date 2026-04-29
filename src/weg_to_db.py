@@ -200,6 +200,18 @@ def extract_pages(pdf_path: Path) -> list[tuple[int, str]]:
     return pages
 
 
+def extract_pages_tesseract(pdf_path: Path) -> list[tuple[int, str]]:
+    """Fallback für eingescannte PDFs: Seiten als Bilder → Tesseract-OCR (Deutsch)."""
+    from pdf2image import convert_from_path
+    import pytesseract
+    images = convert_from_path(str(pdf_path), dpi=300)
+    pages = []
+    for i, img in enumerate(images):
+        text = pytesseract.image_to_string(img, lang='deu')
+        pages.append((i + 1, text))
+    return pages
+
+
 def pages_to_text(pages: list[tuple[int, str]]) -> str:
     """Fügt Seiten mit Markern zusammen."""
     parts = []
@@ -491,7 +503,7 @@ def extract_beschluesse_format_a(text: str, use_llm: bool = True) -> list:
 RE_TOP_B = re.compile(
     r'(?m)^[ \t]*'
     r'(?:zu\s+)?'                           # optionales "zu "
-    r'T\s*O\s*P\s+'                         # "TOP" (mit OCR-Spaces)
+    r'T\s*O\s*P\s*'                          # "TOP" (mit OCR-Spaces, auch ohne Leerzeichen davor)
     r'(\d+(?:\s*[.\s]\s*\d+)?)'             # Nummer: "1", "2.1", "2. 2"
     r'\s*[:\-]'                             # Trennzeichen
     r'[ \t]*([^\n]{0,150})',                # Titel
@@ -735,6 +747,74 @@ def get_edited_fields(cur, beschluss_id: int) -> set:
     return {r['feld'] for r in rows}
 
 
+def analyse_pdf(pdf_path: Path, filename_hint: str = '', use_llm: bool = True) -> dict:
+    """
+    Analysiert eine PDF und gibt extrahierte Daten zurück – ohne DB-Zugriff.
+    Returns: {
+        'protokoll': {dateiname, versammlungs_datum, hausverwaltung, weg_objekt, ort,
+                      format, machine_readable},
+        'beschluesse': [{top_nr, top_titel, beschluss_text, ja_stimmen, ...}, ...]
+    }
+    """
+    fname = filename_hint or pdf_path.name
+
+    pages    = extract_pages(pdf_path)
+    raw_text = pages_to_text(pages)
+
+    if len(raw_text.strip()) < 200:
+        # Eingescannte PDF ohne Textlayer → Tesseract-Fallback
+        print(f"  Wenig pypdf-Text ({len(raw_text.strip())} Zeichen), starte Tesseract-OCR...")
+        pages    = extract_pages_tesseract(pdf_path)
+        raw_text = pages_to_text(pages)
+        if len(raw_text.strip()) < 200:
+            raise ValueError(
+                f'Zu wenig Text nach Tesseract-OCR ({len(raw_text.strip())} Zeichen) – '
+                f'PDF unlesbar oder leer?'
+            )
+
+    sample        = min(3, len(pages))
+    avg_chars     = sum(len(t.strip()) for _, t in pages[:sample]) / sample
+    machine_readable = avg_chars >= 200
+
+    if use_llm and not machine_readable:
+        print(f"  LLM:    OCR-Bereinigung ({len(pages)} Seiten)...", end=' ', flush=True)
+        cleaned_pages = []
+        for nr, page_text in pages:
+            if len(page_text.strip()) > 50:
+                cleaned_pages.append((nr, llm_clean_ocr(page_text, use_llm)))
+            else:
+                cleaned_pages.append((nr, page_text))
+        text = pages_to_text(cleaned_pages)
+        print("✓")
+    else:
+        text = raw_text
+
+    text = normalize_spaces(text)
+
+    objekt, hv = meta_from_filename(fname)
+    fmt        = format_from_filename(fname)
+    datum      = extract_datum(text, fname)
+    ort        = extract_ort(text)
+
+    if fmt == 'A':
+        beschluesse = extract_beschluesse_format_a(text, use_llm)
+    else:
+        beschluesse = extract_beschluesse_format_b(text, use_llm)
+
+    return {
+        'protokoll': {
+            'dateiname':           Path(fname).name,
+            'versammlungs_datum':  datum,
+            'hausverwaltung':      hv,
+            'weg_objekt':          objekt,
+            'ort':                 ort,
+            'format':              fmt,
+            'machine_readable':    machine_readable,
+        },
+        'beschluesse': beschluesse,
+    }
+
+
 def process_pdf(pdf_path: Path, db_path: Path,
                 rebuild: bool = False, use_llm: bool = True,
                 force: bool = False) -> dict:
@@ -750,55 +830,30 @@ def process_pdf(pdf_path: Path, db_path: Path,
         conn.close()
         return {'skipped': True}
 
-    # rebuild=True: vorhandene Protokoll-ID merken für später, NICHT löschen
     existing_protokoll_id = existing['id'] if existing else None
 
     print(f"  Lese:   {pdf_path.name}")
 
-    # Text extrahieren
-    pages    = extract_pages(pdf_path)
-    raw_text = pages_to_text(pages)
-
-    # Wenig Text → OCR fehlgeschlagen
-    if len(raw_text.strip()) < 200:
-        print(f"  ⚠  Zu wenig Text ({len(raw_text.strip())} Zeichen) – OCR fehlgeschlagen?")
+    try:
+        result = analyse_pdf(pdf_path, use_llm=use_llm)
+    except ValueError as e:
+        print(f"  ⚠  {e}")
         conn.close()
         return {'skipped': True, 'reason': 'ocr_failed'}
 
-    # Maschinenlesbar erkennen: Ø Zeichen pro Seite (erste 3 Seiten)
-    sample = min(3, len(pages))
-    avg_chars = sum(len(t.strip()) for _, t in pages[:sample]) / sample
-    machine_readable = avg_chars >= 200
-    if machine_readable:
-        print(f"  ℹ  Maschinenlesbar ({avg_chars:.0f} Zeichen/Seite Ø) – LLM-OCR-Bereinigung übersprungen")
+    meta        = result['protokoll']
+    beschluesse = result['beschluesse']
 
-    # OCR-Textreinigung via LLM – nur für Scans, nicht für maschinenlesbare PDFs
-    if use_llm and not machine_readable:
-        print(f"  LLM:    OCR-Bereinigung ({len(pages)} Seiten)...", end=' ', flush=True)
-        cleaned_pages = []
-        for nr, page_text in pages:
-            if len(page_text.strip()) > 50:
-                cleaned = llm_clean_ocr(page_text, use_llm)
-                cleaned_pages.append((nr, cleaned))
-            else:
-                cleaned_pages.append((nr, page_text))
-        text = pages_to_text(cleaned_pages)
-        print("✓")
-    else:
-        text = raw_text
-
-    # Basis-Normalisierung (Spaces, nicht Newlines)
-    text = normalize_spaces(text)
-
-    # Metadaten
-    objekt, hv = meta_from_filename(pdf_path.name)
-    fmt        = format_from_filename(pdf_path.name)
-    datum      = extract_datum(text, pdf_path.name)
-    ort        = extract_ort(text)
-
-    print(f"  Datum:  {datum or '–'}  |  Objekt: {objekt}  |  Format: {fmt}")
+    if meta['machine_readable']:
+        print(f"  ℹ  Maschinenlesbar – LLM-OCR-Bereinigung übersprungen")
+    print(f"  Datum:  {meta['versammlungs_datum'] or '–'}  |  Objekt: {meta['weg_objekt']}  |  Format: {meta['format']}")
 
     # Protokoll in DB einfügen oder aktualisieren
+    objekt = meta['weg_objekt']
+    hv     = meta['hausverwaltung']
+    datum  = meta['versammlungs_datum']
+    ort    = meta['ort']
+
     if existing_protokoll_id is None:
         cur.execute("""
             INSERT INTO protokolle
@@ -817,12 +872,6 @@ def process_pdf(pdf_path: Path, db_path: Path,
             WHERE id=?
         """, (pdf_path.name, datum, hv, objekt, ort,
               datetime.now().isoformat(), protokoll_id))
-
-    # Beschlüsse extrahieren
-    if fmt == 'A':
-        beschluesse = extract_beschluesse_format_a(text, use_llm)
-    else:
-        beschluesse = extract_beschluesse_format_b(text, use_llm)
 
     # Bestehende Beschlüsse aus DB laden (für Rebuild: top_nr → id Mapping)
     existing_map = {}  # top_nr → beschluss_id

@@ -38,6 +38,7 @@ import re
 import sqlite3
 import subprocess
 import sys
+import tempfile
 import webbrowser
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -50,6 +51,8 @@ DEFAULT_PORT  = 8765
 DEFAULT_DB    = Path(__file__).parent / 'weg_protokolle.db'
 HTML_FILE     = Path(__file__).parent / 'weg_app.html'
 BELEG_DIR     = Path(__file__).parent / 'belegpruefung'
+OUTPUT_DIR    = Path(__file__).parent / 'output'
+SRC_DIR       = Path(__file__).parent / 'src'
 
 # ─── Datenbankzugriff ─────────────────────────────────────────────────────────
 
@@ -482,6 +485,148 @@ def api_delete_protokoll(db_path: Path, protokoll_id: int) -> dict:
     conn.close()
     return {'ok': True, 'beschluesse_deleted': len(ids)}
 
+# ─── PDF-Analyse-API ──────────────────────────────────────────────────────────
+
+def api_analyse_pdf(db_path: Path, data: dict) -> dict:
+    """
+    Analysiert hochgeladene PDF (base64) und gibt extrahierte Daten zurück.
+    Schreibt NICHTS in die DB – nur Analyse.
+    Input:  {pdf_data: base64, filename: str, use_llm: bool}
+    Output: {protokoll: {...}, beschluesse: [...], already_exists: bool, existing_id: int|null}
+    """
+    raw_name  = re.sub(r'[^\w.\-]', '_', data.get('filename', 'upload.pdf'))
+    # Dateiname für output/: immer _durchsuchbar.pdf
+    stem      = raw_name[:-4] if raw_name.endswith('.pdf') else raw_name
+    if not stem.endswith('_durchsuchbar'):
+        stem = stem + '_durchsuchbar'
+    filename  = stem + '.pdf'
+    pdf_bytes = base64.b64decode(data['pdf_data'])
+    use_llm   = data.get('use_llm', True)
+
+    with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
+        tmp.write(pdf_bytes)
+        tmp_path = Path(tmp.name)
+
+    try:
+        if str(SRC_DIR) not in sys.path:
+            sys.path.insert(0, str(SRC_DIR))
+        from weg_to_db import analyse_pdf  # type: ignore
+
+        result = analyse_pdf(tmp_path, filename_hint=filename, use_llm=use_llm)
+
+        # Prüfen ob Protokoll mit gleichem Datum + Objekt schon in DB ist
+        conn = get_conn(db_path)
+        datum  = result['protokoll'].get('versammlungs_datum')
+        objekt = result['protokoll'].get('weg_objekt')
+        existing = None
+        if datum and objekt:
+            existing = conn.execute(
+                "SELECT id FROM protokolle WHERE versammlungs_datum=? AND weg_objekt=?",
+                (datum, objekt)
+            ).fetchone()
+        if not existing:
+            existing = conn.execute(
+                "SELECT id FROM protokolle WHERE dateiname=?", (filename,)
+            ).fetchone()
+        conn.close()
+
+        result['already_exists'] = existing is not None
+        result['existing_id']    = existing['id'] if existing else None
+        result['filename_safe']  = filename
+        return result
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+
+def _make_durchsuchbar(pdf_bytes: bytes, dest: Path) -> Path:
+    """
+    Erzeugt eine durchsuchbare PDF via weg_protokoll_processor.process_pdf():
+    - Maschinenlesbar → nur Beirat-Hervorhebungen ergänzen
+    - Gescannt        → OCR via ocrmypdf + Beirat-Hervorhebungen
+    Gibt den tatsächlichen Zielpfad zurück.
+    """
+    with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
+        tmp.write(pdf_bytes)
+        tmp_path = Path(tmp.name)
+    try:
+        if str(SRC_DIR) not in sys.path:
+            sys.path.insert(0, str(SRC_DIR))
+        from weg_protokoll_processor import process_pdf, detect_tesseract_lang, check_ocrmypdf  # type: ignore
+        lang        = detect_tesseract_lang()
+        use_ocrmypdf = check_ocrmypdf()
+        process_pdf(tmp_path, dest, lang, use_ocrmypdf)
+    except Exception as e:
+        print(f'  weg_protokoll_processor Fehler: {e} – speichere Original')
+        dest.write_bytes(pdf_bytes)
+    finally:
+        tmp_path.unlink(missing_ok=True)
+    return dest
+
+
+def api_import_protokoll_komplett(db_path: Path, data: dict) -> dict:
+    """
+    Importiert Protokoll + alle Beschlüsse in einem Schritt.
+    Erzeugt eine durchsuchbare PDF (_durchsuchbar.pdf) via ocrmypdf.
+    Input:  {protokoll: {...}, beschluesse: [...], pdf_data: base64 (optional)}
+    """
+    proto    = data['protokoll']
+    beschl   = data.get('beschluesse', [])
+    filename = re.sub(r'[^\w.\-]', '_', proto.get('dateiname', ''))
+
+    # Sicherstellen dass Dateiname auf _durchsuchbar.pdf endet
+    if filename and not filename.endswith('_durchsuchbar.pdf'):
+        stem = filename[:-4] if filename.endswith('.pdf') else filename
+        filename = stem + '_durchsuchbar.pdf'
+        proto['dateiname'] = filename
+
+    # PDF verarbeiten: ocrmypdf → _durchsuchbar.pdf in output/
+    if data.get('pdf_data') and filename:
+        OUTPUT_DIR.mkdir(exist_ok=True)
+        dest = OUTPUT_DIR / filename
+        if not dest.exists():
+            print(f'  ocrmypdf: {filename} …')
+            _make_durchsuchbar(base64.b64decode(data['pdf_data']), dest)
+
+    conn = get_conn(db_path)
+    now  = datetime.now().isoformat()
+
+    cur = conn.execute("""
+        INSERT INTO protokolle (dateiname, pdf_pfad, versammlungs_datum, hausverwaltung,
+             weg_objekt, ort, importiert_am)
+        VALUES (?,?,?,?,?,?,?)
+    """, (
+        filename,
+        proto.get('pdf_pfad', f'output/{filename}'),
+        proto.get('versammlungs_datum'),
+        proto.get('hausverwaltung'),
+        proto.get('weg_objekt'),
+        proto.get('ort'),
+        now,
+    ))
+    protokoll_id = cur.lastrowid
+
+    count = 0
+    for b in beschl:
+        if not b.get('top_nr'):
+            continue
+        conn.execute("""
+            INSERT INTO beschluesse (protokoll_id, top_nr, top_titel, beschluss_text,
+                ja_stimmen, nein_stimmen, enthaltungen, ergebnis, beirat_relevant, seite)
+            VALUES (?,?,?,?,?,?,?,?,?,?)
+        """, (
+            protokoll_id,
+            b.get('top_nr'), b.get('top_titel'), b.get('beschluss_text'),
+            b.get('ja_stimmen'), b.get('nein_stimmen'), b.get('enthaltungen'),
+            b.get('ergebnis'), b.get('beirat_relevant', 0), b.get('seite'),
+        ))
+        count += 1
+
+    conn.commit()
+    row = dict(conn.execute("SELECT * FROM protokolle WHERE id=?", (protokoll_id,)).fetchone())
+    conn.close()
+    return {'protokoll': row, 'protokoll_id': protokoll_id, 'beschluesse_count': count}
+
+
 # ─── Belegprüfung-API ─────────────────────────────────────────────────────────
 
 def api_get_belegpruefungen(db_path: Path) -> list:
@@ -669,6 +814,22 @@ class WEGHandler(BaseHTTPRequestHandler):
             self.wfile.write(html)
             return
 
+        # ── Statische Dateien ausliefern (CSS, JS) ──────────────────────────
+        if path in ('/weg_app.css', '/weg_app.js'):
+            static_file = Path(__file__).parent / path.lstrip('/')
+            if not static_file.exists():
+                self.send_error_json(404, f'{path} nicht gefunden')
+                return
+            data = static_file.read_bytes()
+            ct = 'text/css; charset=utf-8' if path.endswith('.css') else 'text/javascript; charset=utf-8'
+            self.send_response(200)
+            self.send_header('Content-Type', ct)
+            self.send_header('Content-Length', str(len(data)))
+            self.send_header('Cache-Control', 'no-store')
+            self.end_headers()
+            self.wfile.write(data)
+            return
+
         # ── Beleg-Dateien ausliefern ─────────────────────────────────────────
         if path.startswith('/belegpruefung/'):
             file_path = Path(__file__).parent / path.lstrip('/')
@@ -804,6 +965,47 @@ class WEGHandler(BaseHTTPRequestHandler):
                 data         = self.read_body()
                 result       = api_save_edit(self.db_path, beschluss_id, data)
                 self.send_json(result)
+            except Exception as e:
+                self.send_error_json(500, str(e))
+            return
+
+        # POST /api/import/analyse  (PDF hochladen + analysieren, kein DB-Write)
+        if path == '/api/import/analyse':
+            try:
+                data   = self.read_body()
+                result = api_analyse_pdf(self.db_path, data)
+                self.send_json(result)
+            except Exception as e:
+                self.send_error_json(500, str(e))
+            return
+
+        # POST /api/import/protokoll-komplett  (Protokoll + alle Beschlüsse in einem Schritt)
+        if path == '/api/import/protokoll-komplett':
+            try:
+                data   = self.read_body()
+                result = api_import_protokoll_komplett(self.db_path, data)
+                self.send_json(result)
+            except Exception as e:
+                self.send_error_json(500, str(e))
+            return
+
+        # POST /api/protokoll/<id>/replace-pdf  (PDF austauschen)
+        m = re.match(r'^/api/protokoll/(\d+)/replace-pdf$', path)
+        if m:
+            proto_id = int(m.group(1))
+            try:
+                data = self.read_body()
+                conn = get_conn(self.db_path)
+                row  = conn.execute('SELECT dateiname FROM protokolle WHERE id=?', (proto_id,)).fetchone()
+                if not row:
+                    self.send_error_json(404, f'Protokoll {proto_id} nicht gefunden')
+                    return
+                dateiname = row['dateiname']
+                OUTPUT_DIR.mkdir(exist_ok=True)
+                dest = OUTPUT_DIR / dateiname
+                print(f'  PDF tauschen: {dateiname}')
+                _make_durchsuchbar(base64.b64decode(data['pdf_data']), dest)
+                self.send_json({'ok': True, 'dateiname': dateiname})
             except Exception as e:
                 self.send_error_json(500, str(e))
             return

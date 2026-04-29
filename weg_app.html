@@ -5,840 +5,27 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WEG Protokolle</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg:        #0f0f0f;
-    --surface:   #1a1a1a;
-    --border:    #2a2a2a;
-    --border2:   #333;
-    --text:      #e0e0e0;
-    --muted:     #666;
-    --accent:    #f0c040;
-    --accent2:   #e07020;
-    --beirat:    #e05050;
-    --green:     #50c070;
-    --blue:      #4090e0;
-    --mono:      'IBM Plex Mono', monospace;
-    --sans:      'IBM Plex Sans', sans-serif;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  html { height: 100%; overflow: hidden; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    font-size: 14px;
-    height: 100vh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* ── Header ── */
-  header {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border2);
-    padding: 0 24px;
-    height: 52px;
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-  header h1 {
-    font-family: var(--mono);
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--accent);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
-  header .sep { color: var(--border2); }
-  .stats-bar {
-    display: flex;
-    gap: 16px;
-    margin-left: auto;
-  }
-  .stat {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--muted);
-  }
-  .stat span { color: var(--text); font-weight: 500; }
-
-  /* ── Layout ── */
-  .app {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-    min-height: 0;
-  }
-
-  /* ── Sidebar ── */
-  aside {
-    width: 220px;
-    min-width: 220px;
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    overflow-y: auto;
-    padding: 16px 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-  }
-  .filter-group {
-    padding: 8px 16px 12px;
-    border-bottom: 1px solid var(--border);
-  }
-  .filter-group:last-child { border-bottom: none; }
-  .filter-label {
-    font-family: var(--mono);
-    font-size: 9px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 8px;
-  }
-  .filter-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    padding: 5px 8px;
-    background: none;
-    border: none;
-    border-radius: 4px;
-    color: var(--text);
-    font-family: var(--sans);
-    font-size: 13px;
-    cursor: pointer;
-    text-align: left;
-    transition: background 0.1s;
-  }
-  .filter-btn:hover { background: var(--border); }
-  .filter-btn.active {
-    background: rgba(240,192,64,0.12);
-    color: var(--accent);
-  }
-  .filter-btn .count {
-    margin-left: auto;
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--muted);
-  }
-  .filter-btn.active .count { color: var(--accent); }
-
-  /* Beirat-Filter Button speziell */
-  .filter-btn.beirat-btn.active {
-    background: rgba(224,80,80,0.12);
-    color: var(--beirat);
-  }
-  .filter-btn.beirat-btn.active .count { color: var(--beirat); }
-
-  .search-wrap {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border);
-  }
-  .search-wrap input {
-    width: 100%;
-    background: var(--bg);
-    border: 1px solid var(--border2);
-    border-radius: 4px;
-    padding: 6px 10px;
-    color: var(--text);
-    font-family: var(--sans);
-    font-size: 13px;
-    outline: none;
-    transition: border-color 0.15s;
-  }
-  .search-wrap input:focus { border-color: var(--accent); }
-  .search-wrap input::placeholder { color: var(--muted); }
-
-  /* Jahr-Filter */
-  .year-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    padding: 8px 16px 12px;
-    border-bottom: 1px solid var(--border);
-  }
-  .year-btn {
-    background: none;
-    border: 1px solid var(--border2);
-    border-radius: 3px;
-    padding: 2px 7px;
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--muted);
-    cursor: pointer;
-    transition: all 0.1s;
-  }
-  .year-btn:hover { border-color: var(--text); color: var(--text); }
-  .year-btn.active {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #000;
-    font-weight: 500;
-  }
-
-  /* ── Main ── */
-  main {
-    flex: 1;
-    overflow: hidden;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* Tabs */
-  .tabs {
-    display: flex;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-    padding: 0 20px;
-    gap: 0;
-  }
-  .tab {
-    padding: 12px 18px;
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--muted);
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: all 0.15s;
-    background: none;
-    border-top: none;
-    border-left: none;
-    border-right: none;
-  }
-  .tab:hover { color: var(--text); }
-  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-  .tab .badge {
-    background: var(--beirat);
-    color: #fff;
-    font-size: 9px;
-    padding: 1px 5px;
-    border-radius: 10px;
-    margin-left: 6px;
-    vertical-align: middle;
-  }
-
-  /* Result count */
-  .result-bar {
-    padding: 8px 20px;
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--muted);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background: var(--bg);
-  }
-  .result-bar .found { color: var(--text); }
-  .clear-btn {
-    margin-left: auto;
-    background: none;
-    border: 1px solid var(--border2);
-    border-radius: 3px;
-    padding: 2px 8px;
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--muted);
-    cursor: pointer;
-  }
-  .clear-btn:hover { color: var(--text); border-color: var(--text); }
-
-  /* ── Beschluss-Liste ── */
-  .list-wrap {
-    flex: 1;
-    overflow-y: auto;
-    padding: 0;
-  }
-
-  .beschluss-row {
-    display: grid;
-    grid-template-columns: 90px 100px 50px 1fr 90px 36px 28px;
-    align-items: center;
-    gap: 0;
-    padding: 10px 20px;
-    border-bottom: 1px solid var(--border);
-    cursor: pointer;
-    transition: background 0.1s;
-  }
-  .beschluss-row:hover { background: var(--surface); }
-  .beschluss-row.selected { background: rgba(240,192,64,0.07); }
-  .beschluss-row.beirat-row { border-left: 3px solid var(--beirat); }
-
-  .col-objekt {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--muted);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .col-datum {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text);
-  }
-  .col-top {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--accent);
-    font-weight: 500;
-  }
-  .col-text {
-    font-size: 13px;
-    color: var(--text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    padding: 0 12px;
-  }
-  .col-ergebnis {
-    font-family: var(--mono);
-    font-size: 10px;
-    text-align: right;
-  }
-  .ergebnis-angenommen { color: var(--green); }
-  .ergebnis-abgelehnt  { color: var(--beirat); }
-  .col-beirat { text-align: center; font-size: 12px; }
-
-  /* List header */
-  .list-header {
-    display: grid;
-    grid-template-columns: 90px 100px 50px 1fr 90px 36px 28px;
-    gap: 0;
-    padding: 6px 20px;
-    background: var(--bg);
-    border-bottom: 1px solid var(--border2);
-    position: sticky;
-    top: 0;
-    z-index: 10;
-  }
-  .list-header span {
-    font-family: var(--mono);
-    font-size: 9px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--muted);
-    padding: 0 12px;
-  }
-  .list-header span:first-child,
-  .list-header span:nth-child(2),
-  .list-header span:nth-child(3) { padding-left: 0; }
-
-  /* ── Detail-Panel ── */
-  .detail-panel {
-    width: 420px;
-    min-width: 420px;
-    background: var(--surface);
-    border-left: 1px solid var(--border);
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-  }
-  .detail-panel.hidden { display: none; }
-
-  /* ── Scrollbars ── */
-  aside::-webkit-scrollbar,
-  .list-wrap::-webkit-scrollbar,
-  .detail-panel::-webkit-scrollbar { width: 4px; }
-  aside::-webkit-scrollbar-thumb,
-  .list-wrap::-webkit-scrollbar-thumb,
-  .detail-panel::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
-  .detail-header {
-    padding: 16px 20px 12px;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg);
-    position: sticky;
-    top: 0;
-    z-index: 10;
-  }
-  .detail-header .d-top {
-    font-family: var(--mono);
-    font-size: 20px;
-    font-weight: 500;
-    color: var(--accent);
-    margin-bottom: 4px;
-  }
-  .detail-header .d-meta {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--muted);
-  }
-  .detail-header .d-beirat {
-    display: inline-block;
-    margin-top: 8px;
-    background: rgba(224,80,80,0.15);
-    color: var(--beirat);
-    font-family: var(--mono);
-    font-size: 10px;
-    padding: 2px 8px;
-    border-radius: 3px;
-    border: 1px solid rgba(224,80,80,0.3);
-  }
-  .detail-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 16px; }
-
-  .d-section-label {
-    font-family: var(--mono);
-    font-size: 9px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 6px;
-  }
-  .d-text {
-    font-size: 13px;
-    line-height: 1.65;
-    color: var(--text);
-    background: var(--bg);
-    padding: 12px 14px;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-  }
-  .abstimmung-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 8px;
-  }
-  .abstimmung-cell {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 8px 10px;
-    text-align: center;
-  }
-  .abstimmung-cell .a-label {
-    font-family: var(--mono);
-    font-size: 9px;
-    color: var(--muted);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    margin-bottom: 4px;
-  }
-  .abstimmung-cell .a-val {
-    font-family: var(--mono);
-    font-size: 13px;
-    font-weight: 500;
-  }
-  .a-ja   { color: var(--green); }
-  .a-nein { color: var(--beirat); }
-  .a-enth { color: var(--muted); }
-
-  /* Kommentar + Status im Detail */
-  .status-row {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .status-btn {
-    padding: 4px 12px;
-    border-radius: 4px;
-    font-family: var(--mono);
-    font-size: 11px;
-    cursor: pointer;
-    border: 1px solid var(--border2);
-    background: none;
-    color: var(--muted);
-    transition: all 0.15s;
-  }
-  .status-btn:hover { border-color: var(--text); color: var(--text); }
-  .status-btn.s-offen.active    { background: rgba(240,192,64,0.15); border-color: var(--accent); color: var(--accent); }
-  .status-btn.s-erledigt.active { background: rgba(80,192,112,0.15); border-color: var(--green); color: var(--green); }
-
-
-  .save-btn {
-    align-self: flex-start;
-    background: var(--accent);
-    border: none;
-    border-radius: 4px;
-    padding: 6px 16px;
-    font-family: var(--mono);
-    font-size: 11px;
-    font-weight: 500;
-    color: #000;
-    cursor: pointer;
-    transition: opacity 0.15s;
-  }
-  .save-btn:hover { opacity: 0.85; }
-  .save-note {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--green);
-    display: none;
-    margin-left: 8px;
-  }
-
-  .pdf-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: var(--bg);
-    border: 1px solid var(--border2);
-    border-radius: 4px;
-    padding: 7px 14px;
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text);
-    text-decoration: none;
-    transition: all 0.15s;
-  }
-  .pdf-link:hover { border-color: var(--accent); color: var(--accent); }
-
-  /* Protokoll-Tab */
-  .proto-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 12px;
-    padding: 20px;
-  }
-  .proto-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 14px 16px;
-    transition: border-color 0.15s;
-    cursor: pointer;
-  }
-  .proto-card:hover { border-color: var(--accent); }
-  .proto-card .pc-objekt {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--accent);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    margin-bottom: 4px;
-  }
-  .proto-card .pc-datum {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text);
-    margin-bottom: 6px;
-  }
-  .proto-card .pc-hv {
-    font-size: 12px;
-    color: var(--muted);
-    margin-bottom: 10px;
-  }
-  .proto-card .pc-stats {
-    display: flex;
-    gap: 10px;
-  }
-  .proto-card .pc-stat {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--muted);
-  }
-  .proto-card .pc-stat span { color: var(--text); }
-  .proto-card .pc-beirat-dot {
-    width: 6px; height: 6px;
-    background: var(--beirat);
-    border-radius: 50%;
-    display: inline-block;
-    margin-right: 4px;
-    vertical-align: middle;
-  }
-
-  /* Empty state */
-  .empty {
-    padding: 60px 20px;
-    text-align: center;
-    color: var(--muted);
-    font-family: var(--mono);
-    font-size: 13px;
-  }
-
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: #444; }
-
-  /* Highlight search */
-  mark {
-    background: rgba(240,192,64,0.3);
-    color: inherit;
-    border-radius: 2px;
-  }
-
-  /* ── Import-Button ─────────────────────────────────────────────────── */
-  .import-btn {
-    font-size: 11px; padding: 3px 10px; border-radius: 4px;
-    background: transparent; border: 1px solid var(--border);
-    color: var(--muted); cursor: pointer; font-family: var(--mono);
-    text-decoration: none; display: inline-block;
-    transition: border-color .15s, color .15s;
-  }
-  .import-btn:hover { border-color: var(--accent); color: var(--accent); }
-
-  /* ── Belegprüfung Tab ────────────────────────────────────────────── */
-  .beleg-card {
-    padding: 12px 20px;
-    border-bottom: 1px solid var(--border);
-    cursor: pointer;
-    transition: background 0.1s;
-  }
-  .beleg-card:hover { background: var(--surface); }
-  .beleg-card.selected { background: rgba(240,192,64,0.07); }
-  .beleg-card-header {
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-    margin-bottom: 3px;
-  }
-  .beleg-termin {
-    font-family: var(--mono);
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--accent);
-    white-space: nowrap;
-  }
-  .beleg-objekt { font-size: 13px; color: var(--text); }
-  .beleg-dok-count {
-    margin-left: auto;
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--muted);
-    padding: 1px 7px;
-    border: 1px solid var(--border2);
-    border-radius: 10px;
-    white-space: nowrap;
-  }
-  .beleg-meta { font-size: 11px; color: var(--muted); margin-top: 1px; }
-  .beleg-notiz-preview {
-    font-size: 12px; color: var(--muted); margin-top: 4px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .beleg-dir-hint {
-    padding: 5px 20px;
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--muted);
-    border-bottom: 1px solid var(--border);
-    background: var(--bg);
-  }
-  /* Dokumente im Formular */
-  .dok-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
-  .dok-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 5px 8px;
-    background: var(--bg);
-    border: 1px solid var(--border2);
-    border-radius: 4px;
-  }
-  .dok-name {
-    flex: 1;
-    font-size: 12px;
-    color: var(--text);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .dok-open-btn {
-    font-size: 11px;
-    padding: 2px 8px;
-    background: var(--blue);
-    color: #fff;
-    border: none;
-    border-radius: 3px;
-    cursor: pointer;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    white-space: nowrap;
-  }
-  .dok-open-btn.disabled { opacity: 0.3; cursor: default; pointer-events: none; }
-  .dok-del-btn {
-    font-size: 11px;
-    padding: 2px 6px;
-    background: none;
-    border: 1px solid var(--border2);
-    border-radius: 3px;
-    color: var(--muted);
-    cursor: pointer;
-  }
-  .dok-del-btn:hover { color: var(--beirat); border-color: var(--beirat); }
-  .dok-add-row { display: flex; gap: 6px; margin-top: 4px; }
-  .dok-add-row input {
-    flex: 1;
-    background: var(--bg);
-    border: 1px solid var(--border2);
-    border-radius: 4px;
-    padding: 5px 8px;
-    color: var(--text);
-    font-family: var(--sans);
-    font-size: 12px;
-    outline: none;
-  }
-  .dok-add-row input:focus { border-color: var(--accent); }
-  .dok-add-btn {
-    padding: 5px 12px;
-    background: var(--blue);
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    white-space: nowrap;
-  }
-  .dok-add-btn:hover { opacity: 0.85; }
-
-  /* ── Notizen Tab ──────────────────────────────────────────────────── */
-  .notiz-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-left: 4px solid var(--blue);
-    border-radius: 8px;
-    padding: 14px 16px;
-    cursor: pointer;
-    transition: box-shadow 0.15s;
-  }
-  .notiz-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,0.15); }
-  .notiz-card.selected { border-color: var(--accent); background: rgba(255,168,0,0.06); }
-  .notiz-card-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
-  .notiz-betreff { font-weight: 600; font-size: 14px; color: var(--text); }
-  .notiz-datum { font-size: 11px; color: var(--muted); white-space: nowrap; margin-left: 12px; }
-  .notiz-meta { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
-  .notiz-preview { font-size: 12px; color: var(--muted); white-space: pre-wrap;
-                   max-height: 48px; overflow: hidden; line-height: 1.5; }
-  .notiz-add-btn {
-    display: flex; align-items: center; gap: 8px;
-    background: var(--accent); color: #000; font-weight: 700;
-    border: none; border-radius: 8px; padding: 9px 16px; cursor: pointer;
-    font-size: 13px; margin-bottom: 14px;
-  }
-  .notiz-add-btn:hover { opacity: 0.85; }
-  .notiz-status-toggle {
-    padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;
-    cursor: pointer; border: 1.5px solid; background: transparent;
-    transition: color 0.15s, border-color 0.15s;
-  }
-  .notiz-status-toggle[data-status="offen"]    { color: var(--accent); border-color: var(--accent); }
-  .notiz-status-toggle[data-status="erledigt"] { color: var(--green);  border-color: var(--green);  }
-
-  /* Notiz-Detail / Formular im rechten Panel */
-  .notiz-form-grid {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;
-  }
-  .notiz-form-grid .full { grid-column: 1 / -1; }
-  .form-field label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
-  .form-field input, .form-field select, .form-field textarea {
-    width: 100%; background: var(--bg); border: 1px solid var(--border);
-    border-radius: 6px; padding: 7px 10px; color: var(--text); font-size: 13px;
-    font-family: inherit; box-sizing: border-box;
-  }
-  .form-field textarea { min-height: 220px; resize: vertical; line-height: 1.6; }
-  .form-field input:focus, .form-field select:focus, .form-field textarea:focus {
-    outline: none; border-color: var(--accent);
-  }
-  .notiz-actions { display: flex; gap: 10px; margin-top: 14px; }
-  .btn-danger { background: #c0392b; color: #fff; border: none; border-radius: 6px;
-                padding: 8px 16px; cursor: pointer; font-size: 13px; }
-  .btn-danger:hover { opacity: 0.85; }
-  .btn-secondary { background: transparent; color: var(--muted); border: 1px solid var(--border2);
-                   border-radius: 6px; padding: 8px 16px; cursor: pointer; font-size: 13px; }
-  .btn-secondary:hover { color: var(--text); border-color: var(--muted); }
-  .d-panel-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 16px; 
-                   padding-bottom: 10px; border-bottom: 1px solid var(--border); }
-
-
-  .col-edit { text-align: center; }
-  .col-edit a {
-    font-size: 11px; color: var(--muted); text-decoration: none;
-    padding: 2px 4px; border-radius: 3px;
-    transition: color .15s;
-  }
-  .col-edit a:hover { color: var(--accent); }
-  
-  /* Verknüpfte Notizen im Detail-Panel */
-  .linked-notizen { margin-top: 4px; display: flex; flex-direction: column; gap: 8px; }
-  .linked-notiz-card {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--blue);
-    border-radius: 6px;
-    padding: 10px 12px;
-    cursor: pointer;
-    font-size: 12px;
-  }
-  .linked-notiz-card:hover { border-left-color: var(--accent); }
-  .linked-notiz-betreff { font-weight: 600; color: var(--text); margin-bottom: 3px; }
-  .linked-notiz-meta { color: var(--muted); font-size: 11px; margin-bottom: 4px; }
-  .linked-notiz-preview { color: var(--muted); line-height: 1.5;
-                           white-space: pre-wrap; max-height: 60px; overflow: hidden; }
-  .linked-notiz-empty { color: var(--muted); font-size: 12px; font-style: italic; }
-
-
-  .notiz-gmail-btn {
-    display: inline-flex; align-items: center; gap: 5px;
-    margin-top: 4px; padding: 4px 10px;
-    background: var(--blue); color: #fff;
-    border-radius: 5px; font-size: 11px; font-weight: 600;
-    text-decoration: none; white-space: nowrap;
-  }
-  .notiz-gmail-btn:hover { opacity: 0.85; }
-
-  /* ── Mehrere E-Mail-Links ─────────────────────────────────────────────────── */
-  .gmail-link-row {
-    display: flex; gap: 6px; align-items: center;
-  }
-  .gmail-link-row .gmail-label-inp {
-    width: 140px; flex-shrink: 0;
-    background: var(--bg); border: 1px solid var(--border2);
-    color: var(--text); border-radius: 5px; padding: 5px 8px; font-size: 12px;
-  }
-  .gmail-link-row .gmail-url-inp {
-    flex: 1;
-    background: var(--bg); border: 1px solid var(--border2);
-    color: var(--text); border-radius: 5px; padding: 5px 8px; font-size: 12px;
-  }
-  .gmail-link-row .gmail-open-btn {
-    padding: 5px 9px; background: var(--blue); color: #fff;
-    border: none; border-radius: 5px; font-size: 11px; font-weight: 600;
-    text-decoration: none; white-space: nowrap; cursor: pointer;
-    display: none;
-  }
-  .gmail-link-row .gmail-open-btn:hover { opacity: 0.85; }
-  .gmail-link-row .gmail-remove-btn {
-    background: none; border: 1px solid var(--border2); color: var(--muted);
-    border-radius: 5px; padding: 4px 8px; font-size: 13px; cursor: pointer;
-    line-height: 1; flex-shrink: 0;
-  }
-  .gmail-link-row .gmail-remove-btn:hover { border-color: var(--beirat); color: var(--beirat); }
-  .gmail-add-link-btn {
-    background: none; border: 1px dashed var(--border2); color: var(--muted);
-    border-radius: 5px; padding: 5px 12px; font-size: 12px; cursor: pointer;
-    width: 100%; text-align: left;
-  }
-  .gmail-add-link-btn:hover { border-color: var(--blue); color: var(--blue); }
-
-</style>
+<link rel="stylesheet" href="weg_app.css">
 </head>
 <body>
 
-<header>
-  <h1>WEG Protokolle Test</h1>
-  <span class="sep">|</span>
-  <div class="stats-bar">
-    <div class="stat">Protokolle <span id="hdr-proto">–</span></div>
-    <div class="stat">Beschlüsse <span id="hdr-beschl">–</span></div>
-    <div class="stat">Beirat <span id="hdr-beirat">–</span></div>
-  </div>
-</header>
+<!-- Globales Hidden-Input für PDF-Austausch -->
+<input type="file" id="replace-pdf-input" accept=".pdf" style="display:none"
+       onchange="replacePdfUpload(this)">
 
+<nav class="global-nav">
+  <span class="brand">WEG // Protokolle</span>
+  <button class="gnav-btn active" id="gnav-protokolle" onclick="setGlobalView('protokolle')">Protokolle</button>
+  <button class="gnav-btn" id="gnav-import" onclick="setGlobalView('import')">Bearbeiten</button>
+  <button class="gnav-btn" id="gnav-belegpruefung" onclick="setGlobalView('belegpruefung')">Belegprüfung</button>
+  <div class="gnav-stats">
+    <div class="gnav-stat">Protokolle <span id="hdr-proto">–</span></div>
+    <div class="gnav-stat">Beschlüsse <span id="hdr-beschl">–</span></div>
+    <div class="gnav-stat">Beirat <span id="hdr-beirat">–</span></div>
+  </div>
+</nav>
+
+<div id="view-protokolle" class="global-view active">
 <div class="app">
   <!-- Sidebar -->
   <aside>
@@ -880,6 +67,10 @@
         </button>
       </div>
     </div>
+
+    <div class="filter-group" style="margin-top:auto;padding-top:8px;border-top:1px solid var(--border)">
+      <button class="clear-btn" style="width:100%;text-align:center" onclick="clearFilters()">Filter zurücksetzen</button>
+    </div>
   </aside>
 
   <!-- Main -->
@@ -893,13 +84,11 @@
       <button class="tab" onclick="switchTab('notizen')">
         Notizen <span class="badge" id="tab-notizen-badge">0</span>
       </button>
-      <button class="tab" onclick="switchTab('belegpruefung')">Belegprüfung</button>
     </div>
 
     <div class="result-bar">
       <span id="result-count" class="found">–</span>
       <span id="proto-filter-tag" style="display:none; font-family:var(--mono); font-size:10px; color:var(--accent)"></span>
-      <button class="clear-btn" onclick="clearFilters()">Filter zurücksetzen</button>
     </div>
 
     <!-- Beschlüsse Tab -->
@@ -918,9 +107,6 @@
 
     <!-- Protokolle Tab -->
     <div id="tab-protokolle" class="list-wrap" style="display:none">
-      <div style="padding:8px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:flex-end">
-        <a href="/import?new=proto" target="_blank" class="notiz-add-btn" style="font-size:12px; padding:5px 14px; text-decoration:none">+ Neues Protokoll</a>
-      </div>
       <div class="proto-grid" id="proto-grid"></div>
     </div>
 
@@ -942,17 +128,6 @@
       <div id="notizen-list"></div>
     </div>
 
-    <!-- Belegprüfung Tab -->
-    <div id="tab-belegpruefung" class="list-wrap" style="display:none">
-      <div style="padding:10px 20px; border-bottom:1px solid var(--border)">
-        <button class="notiz-add-btn" onclick="neueBelegpruefung()" style="margin-bottom:0">＋ Neue Belegprüfung</button>
-      </div>
-      <div class="beleg-dir-hint" style="display:flex; align-items:center; gap:10px">
-        <span>Ablageordner: protokolle/belegpruefung/</span>
-        <button onclick="openBelegOrdner()" style="font-size:10px; padding:2px 8px; background:none; border:1px solid var(--border2); border-radius:3px; color:var(--muted); cursor:pointer" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">📂 Im Finder öffnen</button>
-      </div>
-      <div id="belegpruefung-list"></div>
-    </div>
 
   </main>
 
@@ -1048,1345 +223,268 @@
       <span class="save-note" id="notiz-save-note">✓ gespeichert</span>
     </div>
   </div>
-  <!-- Belegprüfung-Detail / Formular (innerhalb detail-panel) -->
-  <div id="beleg-detail" style="display:none; padding:16px 20px; overflow-y:auto; height:100%">
-    <div class="d-panel-title" id="beleg-panel-title">Neue Belegprüfung</div>
-    <div class="notiz-form-grid">
-      <div class="form-field">
-        <label>Termin</label>
-        <input type="date" id="bf-termin">
+  </div>
+</div>
+</div><!-- /#view-protokolle -->
+
+<!-- ── IMPORT-VIEW ────────────────────────────────────────────────────────── -->
+<div id="view-import" class="global-view">
+
+  <!-- Import-Header: Modus-Wahl + Protokoll-Selector -->
+  <div class="imp-header">
+    <button class="imp-mode-btn active" id="imp-mode-analyse-btn" onclick="impSetTopMode('analyse')">PDF analysieren</button>
+    <button class="imp-mode-btn" id="imp-mode-import-btn"  onclick="impSetTopMode('import')">Import</button>
+    <button class="imp-mode-btn" id="imp-mode-manuell-btn" onclick="impSetTopMode('manuell')">Manuell</button>
+    <span style="width:1px;height:24px;background:var(--border2);margin:0 8px"></span>
+    <!-- Manuell-Header-Elemente (nur sichtbar im Manuell-Modus) -->
+    <div id="imp-proto-bar" style="display:none;align-items:center;gap:8px;flex:1">
+      <label style="font-size:11px;color:var(--muted);white-space:nowrap">Protokoll:</label>
+      <select id="imp-proto-select" style="flex:1;max-width:340px;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:4px;font-size:13px" onchange="impOnProtoSelect()">
+        <option value="">– Protokoll wählen –</option>
+      </select>
+      <button class="imp-btn imp-btn-ghost" onclick="impOpenNewProtoModal()">+ Neu</button>
+      <button class="imp-btn imp-btn-danger" id="imp-btn-delete-proto" style="display:none" onclick="impDeleteProtokoll()">🗑 Protokoll löschen</button>
+    </div>
+    <span id="imp-proto-info" style="font-size:11px;color:var(--muted);display:none">–</span>
+  </div>
+
+  <!-- ── Analyse-Modus ── -->
+  <div id="imp-analyse-view" style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+
+    <div id="imp-step-upload" class="analyse-content">
+      <div>
+        <div class="result-section-title">Protokoll-PDF mit Datenbank vergleichen</div>
+        <div class="upload-zone" id="imp-upload-zone"
+             onclick="document.getElementById('imp-file-input').click()"
+             ondragover="event.preventDefault();this.classList.add('dragover')"
+             ondragleave="this.classList.remove('dragover')"
+             ondrop="impOnDrop(event)">
+          <div class="uz-icon">📂</div>
+          <div>PDF hier ablegen oder klicken</div>
+          <div style="font-size:12px;margin-top:4px">Beschlüsse im PDF werden mit den Einträgen in der Datenbank verglichen</div>
+          <div class="uz-name" id="imp-filename-display" style="display:none"></div>
+        </div>
+        <input type="file" id="imp-file-input" accept=".pdf" style="display:none" onchange="impOnFileSelect(this)">
       </div>
-      <div class="form-field">
-        <label>Ort</label>
-        <input type="text" id="bf-ort" placeholder="z.B. Büro HV, vor Ort">
-      </div>
-      <div class="form-field">
-        <label>Hausverwaltung</label>
-        <select id="bf-hv"></select>
-      </div>
-      <div class="form-field">
-        <label>Objekt</label>
-        <select id="bf-objekt"></select>
-      </div>
-      <div class="form-field full">
-        <label>Notizen / Feststellungen</label>
-        <textarea id="bf-notiz" placeholder="Gesprächsnotizen, geprüfte Unterlagen, Feststellungen, Folgeaufgaben…"></textarea>
+      <div class="upload-options">
+        <label><input type="checkbox" id="imp-opt-llm" checked> LLM-OCR-Bereinigung (GPT-4o-mini, empfohlen für eingescannte PDFs)</label>
+        <button class="analyse-btn" id="imp-analyse-btn" onclick="impStartAnalyse()" disabled>Analysieren</button>
       </div>
     </div>
-    <div class="d-section-label" style="margin-top:4px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center">
-      <span>Dokumente &amp; Belege</span>
+
+    <div id="imp-step-loading" class="analyse-loading" style="display:none">
+      <div class="spinner"></div>
+      <div>Analysiere PDF…</div>
+      <div style="font-size:11px;margin-top:4px">OCR-Bereinigung + Beschluss-Extraktion — dauert 30–90 Sekunden</div>
     </div>
-    <div id="bf-dok-list" class="dok-list"></div>
-    <div class="dok-add-row">
-      <input type="file" id="bf-dok-file" multiple style="flex:1; color:var(--text); font-size:12px">
-      <button type="button" class="dok-add-btn" onclick="uploadBelegDateien()">📁 Hochladen</button>
+
+    <div id="imp-step-result" style="display:none;flex:1;overflow:hidden;display:none;flex-direction:column">
+      <div class="analyse-content" id="imp-result-content">
+        <!-- wird dynamisch befüllt -->
+      </div>
     </div>
-    <div class="notiz-actions" style="margin-top:16px">
-      <button class="save-btn" onclick="saveBelegpruefung()">💾 Speichern</button>
-      <button class="btn-secondary" onclick="hideBelegPanel()">✕ Abbrechen</button>
-      <button class="btn-danger" id="beleg-delete-btn" onclick="deleteBelegpruefung()" style="display:none">🗑 Löschen</button>
-      <span class="save-note" id="beleg-save-note">✓ gespeichert</span>
+
+  </div><!-- /#imp-analyse-view -->
+
+  <!-- ── Import-Modus ── -->
+  <div id="imp-import-view" style="flex:1;overflow:hidden;display:none;flex-direction:column">
+
+    <div id="impi-step-upload" class="analyse-content">
+      <div>
+        <div class="result-section-title">Neues Protokoll importieren</div>
+        <div class="upload-zone" id="impi-upload-zone"
+             onclick="document.getElementById('impi-file-input').click()"
+             ondragover="event.preventDefault();this.classList.add('dragover')"
+             ondragleave="this.classList.remove('dragover')"
+             ondrop="impiOnDrop(event)">
+          <div class="uz-icon">📥</div>
+          <div>PDF hier ablegen oder klicken</div>
+          <div style="font-size:12px;margin-top:4px">PDF auswählen → Beschlüsse extrahieren → prüfen → in Datenbank importieren</div>
+          <div class="uz-name" id="impi-filename-display" style="display:none"></div>
+        </div>
+        <input type="file" id="impi-file-input" accept=".pdf" style="display:none" onchange="impiOnFileSelect(this)">
+      </div>
+      <div class="upload-options">
+        <label><input type="checkbox" id="impi-opt-llm" checked> LLM-OCR-Bereinigung (GPT-4o-mini, empfohlen für eingescannte PDFs)</label>
+        <button class="analyse-btn" id="impi-start-btn" onclick="impiStart()" disabled>Extrahieren</button>
+      </div>
+    </div>
+
+    <div id="impi-step-loading" class="analyse-loading" style="display:none">
+      <div class="spinner"></div>
+      <div>Analysiere PDF…</div>
+      <div style="font-size:11px;margin-top:4px">OCR-Bereinigung + Beschluss-Extraktion — dauert 30–90 Sekunden</div>
+    </div>
+
+    <div id="impi-step-result" style="display:none;flex:1;overflow:hidden;flex-direction:column">
+      <div class="analyse-content" id="impi-result-content"></div>
+    </div>
+
+  </div><!-- /#imp-import-view -->
+
+  <!-- ── Manuell-Modus ── -->
+  <div id="imp-manuell-view" style="flex:1;overflow:hidden;display:none;flex-direction:row">
+
+    <!-- PDF-Panel -->
+    <div class="imp-pdf-panel">
+      <div class="imp-panel-hdr">
+        <span>📄 PDF</span>
+        <button class="imp-btn imp-btn-ghost" style="padding:2px 8px;font-size:11px" onclick="document.getElementById('imp-pdf-file-input').click()">Laden</button>
+      </div>
+      <input type="file" id="imp-pdf-file-input" accept=".pdf" style="display:none" onchange="impLoadPDF(this)">
+      <div id="imp-pdf-drop" onclick="document.getElementById('imp-pdf-file-input').click()">
+        <div class="drop-icon">📂</div>
+        <div>PDF hier ablegen oder klicken</div>
+        <div style="font-size:11px">Protokoll zur Eingabe öffnen</div>
+      </div>
+      <iframe id="imp-pdf-frame"></iframe>
+    </div>
+
+    <!-- Formular-Panel -->
+    <div class="imp-form-panel imp-mode-list" id="imp-form-panel">
+      <div class="imp-panel-hdr">
+        <span id="imp-form-title">BESCHLUSS EINGEBEN</span>
+        <button id="imp-btn-new-header" onclick="impSetMode('new')" title="Neuen Beschluss anlegen">＋ Neuer Beschluss</button>
+      </div>
+      <div class="imp-form-scroll">
+        <div class="imp-section-divider">TOP</div>
+        <div class="imp-row2">
+          <div class="imp-field-group"><label>TOP-Nummer</label><input id="imp-f-top" type="text" placeholder="z.B. 1.b, 3, 7.a"></div>
+          <div class="imp-field-group"><label>Seite</label><input id="imp-f-seite" type="number" placeholder="1" min="1"></div>
+        </div>
+        <div class="imp-field-group"><label>TOP-Titel</label><input id="imp-f-titel" type="text" placeholder="Kurztitel des Tagesordnungspunktes"></div>
+        <div class="imp-section-divider"></div>
+        <div class="imp-field-group">
+          <label>Beschlusstext</label>
+          <textarea id="imp-f-text" rows="5" placeholder="Vollständiger Beschlusstext aus dem Protokoll…"></textarea>
+        </div>
+        <div class="imp-section-divider">ABSTIMMUNG</div>
+        <div class="imp-row3">
+          <div class="imp-field-group"><label>JA-Stimmen</label><input id="imp-f-ja" type="text" placeholder="z.B. 21"></div>
+          <div class="imp-field-group"><label>NEIN-Stimmen</label><input id="imp-f-nein" type="text" placeholder="–"></div>
+          <div class="imp-field-group"><label>Enthaltungen</label><input id="imp-f-enth" type="text" placeholder="–"></div>
+        </div>
+        <div class="imp-field-group">
+          <label>Ergebnis</label>
+          <select id="imp-f-ergebnis">
+            <option value="angenommen">✓ angenommen</option>
+            <option value="abgelehnt">✗ abgelehnt</option>
+            <option value="kein Beschluss">— kein Beschluss</option>
+          </select>
+        </div>
+        <div class="imp-field-group">
+          <label>Beirat-relevant?</label>
+          <select id="imp-f-beirat"><option value="0">Nein</option><option value="1">Ja – Beirat beteiligt</option></select>
+        </div>
+      </div>
+      <div id="imp-btn-new-wrap">
+        <button class="imp-btn imp-btn-success" style="width:100%" onclick="impSetMode('new')">＋ Neuer Beschluss</button>
+      </div>
+      <div class="imp-form-actions">
+        <button class="imp-btn imp-btn-danger" id="imp-btn-delete" onclick="impDeleteBeschluss()">🗑 Löschen</button>
+        <button class="imp-btn imp-btn-ghost" id="imp-btn-cancel" onclick="impSetMode('list')">✕ Abbrechen</button>
+        <button class="imp-btn imp-btn-success" id="imp-btn-save" onclick="impSaveBeschluss()">💾 Speichern</button>
+        <span class="imp-save-feedback" id="imp-save-feedback"></span>
+      </div>
+    </div>
+
+    <!-- Listen-Panel -->
+    <div class="imp-list-panel">
+      <div class="imp-panel-hdr">
+        <span>BESCHLÜSSE</span>
+        <span id="imp-list-count" style="color:var(--accent);font-size:12px">0</span>
+      </div>
+      <div id="imp-beschluss-list">
+        <div class="imp-empty">Protokoll wählen<br>um Beschlüsse zu sehen</div>
+      </div>
+    </div>
+
+  </div><!-- /#imp-manuell-view -->
+
+</div><!-- /#view-import -->
+
+<!-- ── BELEGPRÜFUNG-VIEW ──────────────────────────────────────────────────── -->
+<div id="view-belegpruefung" class="global-view">
+  <div class="beleg-global-list">
+    <div class="beleg-global-toolbar">
+      <button class="notiz-add-btn" onclick="neueBelegpruefung()" style="margin-bottom:0">＋ Neue Belegprüfung</button>
+      <span style="font-size:11px; color:var(--muted); font-family:var(--mono)">Ablageordner: protokolle/belegpruefung/</span>
+      <button onclick="openBelegOrdner()" style="font-size:10px; padding:2px 8px; background:none; border:1px solid var(--border2); border-radius:3px; color:var(--muted); cursor:pointer" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">📂 Im Finder öffnen</button>
+    </div>
+    <div class="beleg-global-scroll">
+      <div id="belegpruefung-list"></div>
     </div>
   </div>
+  <!-- Detail/Formular-Spalte -->
+  <div class="beleg-global-detail hidden" id="beleg-global-detail">
+    <div style="padding:16px 20px; overflow-y:auto; height:100%">
+      <div class="d-panel-title" id="beleg-panel-title">Neue Belegprüfung</div>
+      <div class="notiz-form-grid">
+        <div class="form-field">
+          <label>Termin</label>
+          <input type="date" id="bf-termin">
+        </div>
+        <div class="form-field">
+          <label>Ort</label>
+          <input type="text" id="bf-ort" placeholder="z.B. Büro HV, vor Ort">
+        </div>
+        <div class="form-field">
+          <label>Hausverwaltung</label>
+          <select id="bf-hv"></select>
+        </div>
+        <div class="form-field">
+          <label>Objekt</label>
+          <select id="bf-objekt"></select>
+        </div>
+        <div class="form-field full">
+          <label>Notizen / Feststellungen</label>
+          <textarea id="bf-notiz" placeholder="Gesprächsnotizen, geprüfte Unterlagen, Feststellungen, Folgeaufgaben…"></textarea>
+        </div>
+      </div>
+      <div class="d-section-label" style="margin-top:4px; margin-bottom:8px">
+        <span>Dokumente &amp; Belege</span>
+      </div>
+      <div id="bf-dok-list" class="dok-list"></div>
+      <div class="dok-add-row">
+        <input type="file" id="bf-dok-file" multiple style="flex:1; color:var(--text); font-size:12px">
+        <button type="button" class="dok-add-btn" onclick="uploadBelegDateien()">📁 Hochladen</button>
+      </div>
+      <div class="notiz-actions" style="margin-top:16px">
+        <button class="save-btn" onclick="saveBelegpruefung()">💾 Speichern</button>
+        <button class="btn-secondary" onclick="hideBelegPanel()">✕ Abbrechen</button>
+        <button class="btn-danger" id="beleg-delete-btn" onclick="deleteBelegpruefung()" style="display:none">🗑 Löschen</button>
+        <span class="save-note" id="beleg-save-note">✓ gespeichert</span>
+      </div>
+    </div>
+  </div>
+</div><!-- /#view-belegpruefung -->
+
+<!-- ── Neues-Protokoll-Modal (Import) ─────────────────────────────────────── -->
+<div class="modal-overlay" id="imp-proto-modal" style="display:none">
+  <div class="modal">
+    <h2 style="font-family:var(--mono);font-size:14px;color:var(--accent)">Neues Protokoll anlegen</h2>
+    <div class="imp-field-group">
+      <label>WEG-Objekt</label>
+      <select id="imp-m-objekt" onchange="impOnObjektChange()">
+        <option value="">– wählen –</option>
+        <option value="Am Frauentor">Am Frauentor</option>
+        <option value="Dr.-Külz-Straße">Dr.-Külz-Straße</option>
+        <option value="Mariental">Mariental</option>
+        <option value="Rosengarten">Rosengarten</option>
+      </select>
+    </div>
+    <div class="imp-field-group"><label>Hausverwaltung</label><input id="imp-m-hv" type="text" placeholder="wird automatisch gesetzt"></div>
+    <div class="imp-field-group"><label>Versammlungsdatum</label><input id="imp-m-datum" type="date"></div>
+    <div class="imp-field-group"><label>Dateiname (PDF)</label><input id="imp-m-dateiname" type="text" placeholder="Frauentor_2024-11-14_durchsuchbar.pdf"></div>
+    <div class="imp-field-group"><label>Ort</label><input id="imp-m-ort" type="text" placeholder="Eisenach"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+      <button class="imp-btn imp-btn-ghost" onclick="impCloseModal()">Abbrechen</button>
+      <button class="imp-btn imp-btn-primary" onclick="impSaveProtokoll()">Anlegen</button>
+    </div>
   </div>
 </div>
 
-<script>
-// ── Daten (werden per API geladen) ───────────────────────────────────────────
-let RAW = { protokolle: [], beschluesse: [], edits_meta: {} };
 
-// ── Unified Notizen-System (API-basiert) ─────────────────────────────────────
-// Eine Notiz hat: { id, datum, hv, objekt, betreff, text, status,
-//                   beschluss_id (optional), erstellt_am, geaendert_am }
-
-// In-Memory-Cache der Notizen (wird beim Start geladen)
-let _notizenCache = null;
-
-async function loadNotizenFromAPI() {
-  try {
-    const r = await fetch('/api/notizen');
-    _notizenCache = await r.json();
-  } catch(e) {
-    console.error('Notizen laden fehlgeschlagen:', e);
-    _notizenCache = {};
-  }
-}
-
-function getNotizen() {
-  return _notizenCache || {};
-}
-
-async function saveNotizAPI(notizData) {
-  const r = await fetch('/api/notizen', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(notizData),
-  });
-  const saved = await r.json();
-  // Cache aktualisieren
-  if (!_notizenCache) _notizenCache = {};
-  _notizenCache[saved.id] = saved;
-  return saved;
-}
-
-async function deleteNotizAPI(id) {
-  await fetch(`/api/notizen/${encodeURIComponent(id)}`, { method: 'DELETE' });
-  if (_notizenCache) delete _notizenCache[id];
-}
-
-// ── Kommentare-System (Status-only, unabhängig von Notizen) ──────────────────
-// Status wird in der kommentare-Tabelle gespeichert.
-// Format: { beschluss_id: { status, geaendert_am } }
-let _kommentareCache = null;
-
-async function loadKommentareFromAPI() {
-  try {
-    const r = await fetch('/api/kommentare');
-    if (r.ok) {
-      _kommentareCache = await r.json();
-    } else {
-      _kommentareCache = {};
-    }
-  } catch(e) {
-    console.error('Kommentare laden fehlgeschlagen:', e);
-    _kommentareCache = {};
-  }
-}
-
-function getKommentare() {
-  const komm = _kommentareCache || {};
-  // Fallback: für Beschlüsse ohne kommentare-Eintrag alten Notiz-Status verwenden
-  // (Rückwärtskompatibilität — kommentare-Einträge haben immer Vorrang)
-  const result = Object.assign({}, komm);
-  for (const n of Object.values(_notizenCache || {})) {
-    if (n.beschluss_id && !(n.beschluss_id in result)) {
-      result[n.beschluss_id] = { status: n.status || 'offen', geaendert_am: n.geaendert_am };
-    }
-  }
-  return result;
-}
-
-async function saveKommentarAPI(beschluss_id, status) {
-  // Lokalen Cache IMMER aktualisieren – auch wenn Server-Speicherung fehlschlägt
-  if (!_kommentareCache) _kommentareCache = {};
-  _kommentareCache[beschluss_id] = { status, geaendert_am: new Date().toISOString() };
-  try {
-    const r = await fetch('/api/kommentare', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ beschluss_id, status }),
-    });
-    if (r.ok) return await r.json();
-  } catch(e) {
-    console.error('Kommentar-API nicht erreichbar:', e);
-  }
-  return { beschluss_id, status, ok: true };
-}
-
-// ── State ──────────────────────────────────────────────────────────────────────
-let state = {
-  tab:       'beschluesse',
-  search:    '',
-  objekt:    null,
-  hv:        null,
-  year:      null,
-  beirat:    false,
-  status:    null,
-  protokoll: null,
-  selected:  null,
-};
-
-// ── Init ───────────────────────────────────────────────────────────────────────
-async function init() {
-  // Daten + Notizen + Kommentare + Belegprüfungen parallel laden
-  try {
-    const [dataResp] = await Promise.all([
-      fetch('/api/data'),
-      loadNotizenFromAPI(),
-      loadKommentareFromAPI(),
-      loadBelegpruefungenFromAPI(),
-    ]);
-    if (!dataResp.ok) throw new Error(`HTTP ${dataResp.status}`);
-    const data = await dataResp.json();
-    RAW.protokolle  = data.protokolle  || [];
-    RAW.beschluesse = data.beschluesse || [];
-    RAW.edits_meta  = data.edits_meta  || {};
-  } catch(e) {
-    console.error('Daten laden fehlgeschlagen:', e);
-    document.body.innerHTML = `<div style="color:#f88;font-family:monospace;padding:40px">
-      <h2>⚠ Server nicht erreichbar</h2>
-      <p>Bitte starte den Server mit:<br><code>python3 weg_server.py</code></p>
-      <p style="color:#888;font-size:13px">${e}</p>
-    </div>`;
-    return;
-  }
-
-  // Header-Stats
-  const beiratCount = RAW.beschluesse.filter(b => b.beirat_relevant).length;
-  document.getElementById('hdr-proto').textContent  = RAW.protokolle.length;
-  document.getElementById('hdr-beschl').textContent = RAW.beschluesse.length;
-  document.getElementById('hdr-beirat').textContent = beiratCount;
-  document.getElementById('tab-beirat-badge').textContent = beiratCount;
-  document.getElementById('beirat-count').textContent = beiratCount;
-
-  buildFilters();
-  updateStatusCounts();
-  updateNotizBadge();
-  render();
-
-  document.getElementById('search').addEventListener('input', e => {
-    state.search = e.target.value.trim();
-    render();
-  });
-}
-
-// ── Filter aufbauen ────────────────────────────────────────────────────────────
-function buildFilters() {
-  // Objekte
-  const objekte = [...new Set(RAW.protokolle.map(p => p.weg_objekt).filter(Boolean))].sort();
-  const objDiv = document.getElementById('objekt-filters');
-  objDiv.innerHTML = '';
-  // Alle-Button
-  const allBtn = document.createElement('button');
-  allBtn.className = 'filter-btn' + (state.objekt === null ? ' active' : '');
-  allBtn.innerHTML = `Alle <span class="count">${RAW.protokolle.length}</span>`;
-  allBtn.onclick = () => { state.objekt = null; buildFilters(); render(); };
-  objDiv.appendChild(allBtn);
-
-  for (const obj of objekte) {
-    const cnt = RAW.protokolle.filter(p => p.weg_objekt === obj).length;
-    const btn = document.createElement('button');
-    btn.className = 'filter-btn' + (state.objekt === obj ? ' active' : '');
-    btn.innerHTML = `${obj} <span class="count">${cnt}</span>`;
-    btn.onclick = () => { state.objekt = obj; buildFilters(); render(); };
-    objDiv.appendChild(btn);
-  }
-
-  // Hausverwaltungen
-  const hvs = [...new Set(RAW.protokolle.map(p => p.hausverwaltung).filter(Boolean))].sort();
-  const hvDiv = document.getElementById('hv-filters');
-  hvDiv.innerHTML = '';
-  const allHvBtn = document.createElement('button');
-  allHvBtn.className = 'filter-btn' + (state.hv === null ? ' active' : '');
-  allHvBtn.innerHTML = `Alle <span class="count">${RAW.protokolle.length}</span>`;
-  allHvBtn.onclick = () => { state.hv = null; buildFilters(); render(); };
-  hvDiv.appendChild(allHvBtn);
-  for (const hv of hvs) {
-    const cnt = RAW.protokolle.filter(p => p.hausverwaltung === hv).length;
-    const short = hv.replace(' Hausverwaltung GmbH','').replace(' GmbH','').replace(' / La Casa','');
-    const btn = document.createElement('button');
-    btn.className = 'filter-btn' + (state.hv === hv ? ' active' : '');
-    btn.title = hv;
-    btn.innerHTML = `${short} <span class="count">${cnt}</span>`;
-    btn.onclick = () => { state.hv = hv; buildFilters(); render(); };
-    hvDiv.appendChild(btn);
-  }
-
-  // Jahre aus Dateinamen + aktuelles Jahr immer einschließen
-  const currentYear = new Date().getFullYear().toString();
-  const years = [...new Set([
-    ...RAW.protokolle.map(p => {
-      const parts = p.dateiname.split('_');
-      return parts.length >= 2 ? parts[1].substring(0,4) : null;
-    }),
-    currentYear
-  ].filter(Boolean))].sort();
-  const yearDiv = document.getElementById('year-filters');
-  yearDiv.innerHTML = '';
-  for (const y of years) {
-    const btn = document.createElement('button');
-    btn.className = 'year-btn' + (state.year === y ? ' active' : '');
-    btn.textContent = y;
-    btn.onclick = () => {
-      state.year = (state.year === y) ? null : y;
-      buildFilters(); render();
-    };
-    yearDiv.appendChild(btn);
-  }
-
-  // Beirat-Filter Button
-  const bb = document.getElementById('beirat-filter');
-  bb.className = 'filter-btn beirat-btn' + (state.beirat ? ' active' : '');
-}
-
-function toggleBeirat() {
-  state.beirat = !state.beirat;
-  buildFilters(); render();
-}
-
-function toggleStatus(s) {
-  state.status = (state.status === s) ? null : s;
-  const btns = document.querySelectorAll('#status-filters .filter-btn');
-  btns.forEach(b => b.classList.remove('active'));
-  if (state.status) {
-    const idx = ['offen','erledigt'].indexOf(s);
-    if (idx >= 0) btns[idx].classList.add('active');
-  }
-  render();
-}
-
-function clearFilters() {
-  state = { ...state, search: '', objekt: null, hv: null, year: null, beirat: false, status: null, protokoll: null };
-  document.getElementById('search').value = '';
-  buildFilters();
-  render();
-}
-
-// ── Filtern ────────────────────────────────────────────────────────────────────
-function filteredBeschluesse() {
-  const komm = getKommentare();
-  return RAW.beschluesse.filter(b => {
-    // Objekt
-    if (state.objekt && b.weg_objekt !== state.objekt) return false;
-    // HV
-    if (state.hv && b.hausverwaltung !== state.hv) return false;
-    // Jahr – aus Dateiname (zuverlässiger als OCR-Datum)
-    if (state.year) {
-      const parts = (b.dateiname||'').split('_');
-      const fileYear = parts.length >= 2 ? parts[1].substring(0,4) : '';
-      if (fileYear !== state.year) return false;
-    }
-    // Protokoll
-    if (state.protokoll && b.protokoll_id !== state.protokoll) return false;
-    // Beirat
-    if (state.beirat && !b.beirat_relevant) return false;
-    // Status
-    if (state.status) {
-      const k = komm[b.id];
-      const kStatus = k ? k.status : (b.beirat_relevant ? 'offen' : 'erledigt');
-      if (kStatus !== state.status) return false;
-    }
-    // Tolerante Suche inkl. verknüpfter Notizen
-    if (state.search) {
-      const notizTexts = Object.values(getNotizen())
-        .filter(n => n.beschluss_id === b.id)
-        .flatMap(n => [n.betreff, n.text]);
-      const fields = [b.beschluss_text, b.top_nr, b.top_titel,
-                      b.weg_objekt, b.versammlungs_datum, ...notizTexts];
-      if (!fuzzySearchMatch(state.search, fields)) return false;
-    }
-    return true;
-  });
-}
-
-// ── Render ─────────────────────────────────────────────────────────────────────
-function render() {
-  const results = filteredBeschluesse();
-
-  // Protokoll-Filter-Tag
-  const tag = document.getElementById('proto-filter-tag');
-  if (state.protokoll) {
-    const p = RAW.protokolle.find(x => x.id === state.protokoll);
-    tag.style.display = 'inline';
-    tag.textContent   = p ? `· ${p.weg_objekt}  ${p.versammlungs_datum}` : '';
-  } else {
-    tag.style.display = 'none';
-    tag.textContent   = '';
-  }
-
-  if (state.tab === 'beschluesse') {
-    document.getElementById('result-count').textContent =
-      `${results.length} Beschlüsse${state.search ? ` für „${state.search}"` : ''}`;
-    renderBeschluesse(results);
-    updateStatusCounts();
-  } else if (state.tab === 'beirat') {
-    document.getElementById('result-count').textContent = '';
-    renderBeirat();
-    updateStatusCounts();
-  } else if (state.tab === 'protokolle') {
-    document.getElementById('result-count').textContent = '';
-    renderProtokolle();
-  } else if (state.tab === 'notizen') {
-    document.getElementById('result-count').textContent = '';
-    renderNotizen();  // aktualisiert cnt-offen/cnt-erledigt selbst
-  }
-}
-
-function highlight(text, q) {
-  if (!q || !text) return text || '';
-  // Für jedes Suchwort: exakte + normalisierte Varianten hervorheben
-  let result = text;
-  for (const word of q.trim().split(/\s+/).filter(Boolean)) {
-    const esc = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    try { result = result.replace(new RegExp(`(${esc})`, 'gi'), '<mark>$1</mark>'); }
-    catch(e) {}
-  }
-  return result;
-}
-
-function renderBeschluesse(results) {
-  const container = document.getElementById('beschluss-list');
-  const q = state.search.toLowerCase();
-  if (!results.length) {
-    container.innerHTML = '<div class="empty">Keine Beschlüsse gefunden.</div>';
-    return;
-  }
-  container.innerHTML = results.map(b => {
-    const text = (b.beschluss_text || '').substring(0, 120);
-    const highlighted = q ? highlight(text, state.search) : text;
-    const eb = effectiveB(b);
-    const ergebnisClass = eb.ergebnis === 'angenommen' ? 'ergebnis-angenommen'
-                        : eb.ergebnis === 'abgelehnt'  ? 'ergebnis-abgelehnt' : '';
-    const selected = state.selected === b.id ? ' selected' : '';
-    const beiratRow = b.beirat_relevant ? ' beirat-row' : '';
-    return `
-      <div class="beschluss-row${selected}${beiratRow}" onclick="selectBeschluss(${b.id})">
-        <div class="col-objekt">${b.weg_objekt || '–'}</div>
-        <div class="col-datum">${b.versammlungs_datum || '–'}</div>
-        <div class="col-top">${b.top_nr}</div>
-        <div class="col-text">${highlighted}</div>
-        <div class="col-ergebnis ${ergebnisClass}">${eb.ergebnis || '–'}</div>
-        <div class="col-beirat">${b.beirat_relevant ? '🔴' : ''}</div>
-        <div class="col-edit"><a href="/import?proto=${b.protokoll_id}&beschluss=${b.id}" target="_blank" onclick="event.stopPropagation()" title="Bearbeiten">✎</a></div>
-      </div>`;
-  }).join('');
-}
-
-function renderBeirat() {
-  const komm = getKommentare();
-  // Nutze filteredBeschluesse() damit Objekt/HV/Jahr-Filter auch hier wirken
-  const list = filteredBeschluesse().filter(b => b.beirat_relevant);
-  const container = document.getElementById('beirat-list');
-  if (!list.length) {
-    container.innerHTML = '<div class="empty">Keine Beirat-Beschlüsse.</div>';
-    return;
-  }
-  container.innerHTML = list.map(b => {
-    const k = komm[b.id];
-    const status = k ? k.status : 'offen';
-    const statusLabel = status === 'erledigt' ? '● Erledigt' : '○ Offen';
-    const statusColor = status === 'erledigt' ? 'var(--green)' : 'var(--accent)';
-    const selected = state.selected === b.id ? ' selected' : '';
-    return `
-      <div class="beschluss-row beirat-row${selected}" onclick="selectBeschluss(${b.id})">
-        <div class="col-objekt">${b.weg_objekt || '–'}</div>
-        <div class="col-datum">${b.versammlungs_datum || '–'}</div>
-        <div class="col-top">${b.top_nr}</div>
-        <div class="col-text">${(b.beschluss_text || '').substring(0,120)}</div>
-        <div class="col-ergebnis" style="color:${statusColor}">${statusLabel}</div>
-        <div></div>
-      </div>`;
-  }).join('');
-}
-
-function renderProtokolle() {
-  // Alle Filter anwenden (Objekt, HV, Jahr)
-  let protos = RAW.protokolle;
-  if (state.objekt) protos = protos.filter(p => p.weg_objekt === state.objekt);
-  if (state.hv)     protos = protos.filter(p => p.hausverwaltung === state.hv);
-  if (state.year)   protos = protos.filter(p => (p.dateiname||'').split('_')[1]?.startsWith(state.year));
-
-  const container = document.getElementById('proto-grid');
-  if (!protos.length) {
-    container.innerHTML = '<div class="empty">Keine Protokolle gefunden.</div>';
-    return;
-  }
-  container.innerHTML = protos.map(p => {
-    // Beschlüsse aus RAW.beschluesse zählen (protokoll_id verknüpft)
-    const beschl = RAW.beschluesse.filter(b => b.protokoll_id === p.id);
-    const beiratCnt = beschl.filter(b => b.beirat_relevant).length;
-    const year = (p.dateiname||'').split('_')[1]?.substring(0,4) || '';
-    // Notizen zum gleichen Objekt + Datum
-    const notizen = getNotizen();
-    const notizCnt = Object.values(notizen).filter(n =>
-      n.objekt === p.weg_objekt && n.datum === p.versammlungs_datum
-    ).length;
-    return `
-      <div class="proto-card" onclick="openProtokoll(${p.id})">
-        <div class="pc-objekt">${p.weg_objekt || '–'}</div>
-        <div class="pc-datum">${p.versammlungs_datum || year}</div>
-        <div class="pc-hv">${p.hausverwaltung || '–'}</div>
-        <div class="pc-stats">
-          <div class="pc-stat">Beschlüsse <span>${beschl.length}</span></div>
-          ${beiratCnt > 0 ? `<div class="pc-stat"><span class="pc-beirat-dot"></span><span>${beiratCnt} Beirat</span></div>` : ''}
-          ${notizCnt > 0 ? `<div class="pc-stat">💬 <span>${notizCnt} Notiz${notizCnt>1?'en':''}</span></div>` : ''}
-          <a class="pdf-link" href="output/${p.dateiname}" target="_blank" style="padding:3px 8px;font-size:10px;margin-left:auto" onclick="event.stopPropagation()">PDF</a>
-          <a class="import-btn" href="/import?proto=${p.id}" target="_blank" onclick="event.stopPropagation()">✎</a>
-        </div>
-      </div>`;
-  }).join('');
-}
-
-function openProtokoll(id) {
-  state.protokoll = id;
-  state.selected  = null;
-  switchTabDirect('beschluesse');
-}
-
-// ── Detail ─────────────────────────────────────────────────────────────────────
-function selectBeschluss(id) {
-  state.selected = id;
-  hideNotizPanel();
-
-  const b  = RAW.beschluesse.find(x => x.id === id);
-  if (!b) return;
-  const eb = effectiveB(b);
-
-  const komm = getKommentare();
-  const k = komm[id] || { status: b.beirat_relevant ? 'offen' : 'erledigt' };
-
-  // Header
-  document.getElementById('d-top').textContent  = `TOP ${b.top_nr}`;
-  document.getElementById('d-meta').textContent =
-    `${b.weg_objekt}  ·  ${b.versammlungs_datum}  ·  ${b.hausverwaltung}`;
-  const badge = document.getElementById('d-beirat-badge');
-  badge.style.display = b.beirat_relevant ? 'block' : 'none';
-
-  // Text (effektiv)
-  document.getElementById('d-text').textContent = eb.beschluss_text || '(kein Text erkannt)';
-
-  // Abstimmung (effektiv)
-  const abstWrap = document.getElementById('d-abstimmung-wrap');
-  if (eb.ja_stimmen || eb.nein_stimmen || eb.enthaltungen) {
-    abstWrap.style.display = 'block';
-    document.getElementById('d-abstimmung').innerHTML = `
-      <div class="abstimmung-cell">
-        <div class="a-label">JA</div>
-        <div class="a-val a-ja">${eb.ja_stimmen || '–'}</div>
-      </div>
-      <div class="abstimmung-cell">
-        <div class="a-label">NEIN</div>
-        <div class="a-val a-nein">${eb.nein_stimmen || '–'}</div>
-      </div>
-      <div class="abstimmung-cell">
-        <div class="a-label">Enthaltung</div>
-        <div class="a-val a-enth">${eb.enthaltungen || '–'}</div>
-      </div>`;
-  } else {
-    abstWrap.style.display = 'none';
-  }
-
-  // Status-Buttons: aus kommentare-Cache lesen
-  document.querySelectorAll('.status-btn').forEach(btn => btn.classList.remove('active'));
-  const statusMap = { 'offen': 's-offen', 'erledigt': 's-erledigt' };
-  document.querySelector(`.${statusMap[k.status]}`)?.classList.add('active');
-
-  // PDF-Link – Pfad: output/<dateiname>
-  const pdfLink = document.getElementById('d-pdf-link');
-  pdfLink.href = `output/${b.dateiname}`;
-  document.getElementById('d-pdf-name').textContent = b.dateiname.replace('_durchsuchbar','');
-
-  // Notizen zu diesem Beschluss
-  renderBeschlussNotizen(id);
-
-  // Panel zeigen
-  document.getElementById('detail-panel').classList.remove('hidden');
-
-  // Liste neu rendern (für selected-Markierung)
-  if (state.tab === 'beschluesse') renderBeschluesse(filteredBeschluesse());
-  if (state.tab === 'beirat') renderBeirat();
-}
-
-async function setStatus(s) {
-  if (!state.selected) return;
-  const b = RAW.beschluesse.find(x => x.id === state.selected);
-
-  // Status in kommentare-Tabelle speichern (kein Notiz-Zwang)
-  // Cache wird in saveKommentarAPI() immer zuerst aktualisiert – kein Early-Return nötig
-  await saveKommentarAPI(state.selected, s);
-
-  // Status-Button sofort aktualisieren
-  document.querySelectorAll('.status-btn').forEach(btn => btn.classList.remove('active'));
-  const statusMap = { 'offen': 's-offen', 'erledigt': 's-erledigt' };
-  document.querySelector(`.${statusMap[s]}`)?.classList.add('active');
-  updateStatusCounts();
-  if (state.tab === 'beirat') renderBeirat();
-
-  // Notiz-Formular optional öffnen (vorausgefüllt) – Abbrechen erstellt KEINE Notiz
-  const savedSelected = state.selected;
-  const todayDE = new Date().toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric' });
-  const statusLabel = s === 'erledigt' ? 'Erledigt' : 'Offen gesetzt';
-  neueNotiz({
-    objekt:       b?.weg_objekt        || '',
-    hv:           b?.hausverwaltung    || '',
-    datum:        b?.versammlungs_datum || '',
-    beschluss_id: state.selected,
-    betreff:      b ? `TOP ${b.top_nr}: ${(b.top_titel || b.beschluss_text || '').substring(0,60)}` : '',
-    text:         `${statusLabel} am ${todayDE}`,
-  });
-  state.selected = savedSelected;
-}
-
-
-function updateStatusCounts() {
-  const komm = getKommentare();
-  // Alle aktiven Filter anwenden (außer Status selbst) – damit der Zähler
-  // exakt das zeigt, was beim Klick auf den Filter-Button erscheint.
-  const filtered = RAW.beschluesse.filter(b => {
-    if (state.objekt    && b.weg_objekt     !== state.objekt)    return false;
-    if (state.hv        && b.hausverwaltung !== state.hv)        return false;
-    if (state.year) {
-      const fileYear = (b.dateiname || '').split('_')[1]?.substring(0, 4);
-      if (fileYear !== state.year) return false;
-    }
-    if (state.protokoll && b.protokoll_id   !== state.protokoll) return false;
-    if (state.beirat    && !b.beirat_relevant)                   return false;
-    return true;
-  });
-  let offen = 0, erledigt = 0;
-  for (const b of filtered) {
-    const k = komm[b.id];
-    const s = k ? k.status : (b.beirat_relevant ? 'offen' : 'erledigt');
-    if (s === 'offen')    offen++;
-    if (s === 'erledigt') erledigt++;
-  }
-  document.getElementById('cnt-offen').textContent    = offen;
-  document.getElementById('cnt-erledigt').textContent = erledigt;
-}
-
-// ── Tabs ───────────────────────────────────────────────────────────────────────
-function switchTab(tab) {
-  state.tab = tab;
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  event.target.classList.add('active');
-
-  document.getElementById('tab-beschluesse').style.display   = tab === 'beschluesse'   ? 'block' : 'none';
-  document.getElementById('tab-protokolle').style.display    = tab === 'protokolle'    ? 'block' : 'none';
-  document.getElementById('tab-beirat').style.display        = tab === 'beirat'        ? 'block' : 'none';
-  document.getElementById('tab-notizen').style.display       = tab === 'notizen'       ? 'block' : 'none';
-  document.getElementById('tab-belegpruefung').style.display = tab === 'belegpruefung' ? 'block' : 'none';
-  if (tab !== 'notizen')       hideNotizPanel();
-  if (tab !== 'belegpruefung') hideBelegPanel();
-  if (tab === 'belegpruefung') renderBelegpruefungen();
-
-  render();
-}
-
-
-// ── Notizen-System ───────────────────────────────────────────────────────────
-
-let notizEditId = null;
-let notizPanelOpen = false;
-
-// Datumskonvertierung
-function toIsoDate(d) {
-  if (!d) return '';
-  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
-  const p = d.split('.');
-  if (p.length === 3) return `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
-  return '';
-}
-function toDisplayDate(d) {
-  if (!d) return '';
-  if (/^\d{2}\.\d{2}\.\d{4}$/.test(d)) return d;
-  const p = d.split('-');
-  if (p.length === 3) return `${p[2]}.${p[1]}.${p[0]}`;
-  return d;
-}
-
-function getNotizCount() { return Object.keys(getNotizen()).length; }
-
-function updateNotizBadge() {
-  document.getElementById('tab-notizen-badge').textContent = getNotizCount();
-}
-
-function fillNotizSelects(objekt, hv) {
-  const hvSelect  = document.getElementById('nf-hv');
-  const objSelect = document.getElementById('nf-objekt');
-  if (!hvSelect || !objSelect) return;
-  const hvs  = [...new Set(RAW.protokolle.map(p => p.hausverwaltung).filter(Boolean))].sort();
-  const objs = [...new Set(RAW.protokolle.map(p => p.weg_objekt).filter(Boolean))].sort();
-  const shortHv = h => h.replace(' Hausverwaltung GmbH','').replace(' GmbH','').replace(' / La Casa','');
-  hvSelect.innerHTML  = '<option value="">– Hausverwaltung wählen –</option>'
-    + hvs.map(h => `<option value="${h}">${shortHv(h)}</option>`).join('');
-  objSelect.innerHTML = '<option value="">– Objekt wählen –</option>'
-    + objs.map(o => `<option value="${o}">${o}</option>`).join('');
-  if (hv)     hvSelect.value  = hv;
-  if (objekt) objSelect.value = objekt;
-}
-
-function fillBeschlussSelect(objekt, beschlussId) {
-  const sel = document.getElementById('nf-beschluss-id');
-  const wrap = document.getElementById('nf-beschluss-wrap');
-  if (!sel) return;
-  // Nur Beschlüsse des gewählten Objekts anbieten
-  const beschl = objekt
-    ? RAW.beschluesse.filter(b => b.weg_objekt === objekt)
-    : RAW.beschluesse;
-  sel.innerHTML = '<option value="">– kein Beschluss-Bezug –</option>'
-    + beschl.map(b => `<option value="${b.id}">${b.versammlungs_datum} · TOP ${b.top_nr} · ${(b.top_titel||b.beschluss_text||'').substring(0,50)}</option>`).join('');
-  if (beschlussId) sel.value = beschlussId;
-  if (wrap) wrap.style.display = 'block';
-}
-
-function neueNotiz(prefill) {
-  notizEditId = null;
-  const p = prefill || {};
-  fillNotizSelects(p.objekt, p.hv);
-  fillBeschlussSelect(p.objekt, p.beschluss_id);
-
-  const today = new Date().toISOString().split('T')[0];
-  document.getElementById('nf-datum').value   = p.datum ? toIsoDate(p.datum) : today;
-  document.getElementById('nf-betreff').value = p.betreff || '';
-  document.getElementById('nf-text').value    = p.text || '';
-  setGmailLinks(p.gmail_links || []);
-  _setNotizStatusToggle(p.status || 'offen');
-
-  document.getElementById('notiz-panel-title').textContent = 'Neue Notiz';
-  document.getElementById('notiz-delete-btn').style.display = 'none';
-  document.getElementById('notiz-save-note').style.opacity = '0';
-  showNotizPanel();
-  renderNotizen(); // Liste neu rendern (keine Karte selected bei neuer Notiz)
-}
-
-function editNotiz(id) {
-  notizEditId = id;
-  const n = getNotizen()[id];
-  if (!n) return;
-  fillNotizSelects(n.objekt, n.hv);
-  fillBeschlussSelect(n.objekt, n.beschluss_id);
-  document.getElementById('nf-datum').value   = toIsoDate(n.datum || '');
-  document.getElementById('nf-betreff').value = n.betreff || '';
-  document.getElementById('nf-text').value    = n.text || '';
-  setGmailLinks(n.gmail_links || []);
-  _setNotizStatusToggle(n.status || 'offen');
-  document.getElementById('notiz-panel-title').textContent = 'Notiz bearbeiten';
-  document.getElementById('notiz-delete-btn').style.display = 'inline-block';
-  document.getElementById('notiz-save-note').style.opacity = '0';
-  showNotizPanel();
-  renderNotizen(); // Liste sofort neu rendern damit selected-Markierung stimmt
-}
-
-// ── Gmail-Link-Liste ─────────────────────────────────────────────────────────
-
-function _esc(s) {
-  return (s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
-}
-
-function addGmailLinkRow(label = '', url = '') {
-  const list = document.getElementById('nf-gmail-links-list');
-  const row = document.createElement('div');
-  row.className = 'gmail-link-row';
-  row.innerHTML = `
-    <input class="gmail-label-inp" type="text" placeholder="Bezeichnung (optional)" value="${_esc(label)}">
-    <input class="gmail-url-inp"   type="url"  placeholder="https://mail.google.com/mail/u/0/…" value="${_esc(url)}">
-    <a class="gmail-open-btn" target="_blank"${url ? ` href="${_esc(url)}" style="display:inline-flex"` : ''}>✉</a>
-    <button type="button" class="gmail-remove-btn" title="Entfernen">×</button>
-  `;
-  const urlInp    = row.querySelector('.gmail-url-inp');
-  const openBtn   = row.querySelector('.gmail-open-btn');
-  const removeBtn = row.querySelector('.gmail-remove-btn');
-  urlInp.addEventListener('input', () => {
-    const v = urlInp.value.trim();
-    if (v.startsWith('https://')) {
-      openBtn.href = v;
-      openBtn.style.display = 'inline-flex';
-    } else {
-      openBtn.style.display = 'none';
-    }
-  });
-  removeBtn.addEventListener('click', () => row.remove());
-  list.appendChild(row);
-}
-
-function setGmailLinks(links) {
-  const list = document.getElementById('nf-gmail-links-list');
-  if (!list) return;
-  list.innerHTML = '';
-  (links || []).forEach(l => addGmailLinkRow(l.label || '', l.url || ''));
-}
-
-function getGmailLinks() {
-  const rows = document.querySelectorAll('#nf-gmail-links-list .gmail-link-row');
-  const result = [];
-  rows.forEach(row => {
-    const url   = row.querySelector('.gmail-url-inp')?.value.trim()   || '';
-    const label = row.querySelector('.gmail-label-inp')?.value.trim() || '';
-    if (url) result.push({ label, url });
-  });
-  return result;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-
-function showNotizPanel() {
-  document.getElementById('detail-panel').classList.remove('hidden');
-  document.querySelector('.detail-header').style.display = 'none';
-  document.querySelector('.detail-body').style.display   = 'none';
-  document.getElementById('notiz-detail').style.display = 'block';
-  state.selected = null;
-  notizPanelOpen = true;
-}
-
-function hideNotizPanel() {
-  if (document.querySelector('.detail-header'))
-    document.querySelector('.detail-header').style.display = '';
-  if (document.querySelector('.detail-body'))
-    document.querySelector('.detail-body').style.display   = '';
-  document.getElementById('notiz-detail').style.display   = 'none';
-  notizEditId = null;
-  notizPanelOpen = false;
-  // Liste neu rendern damit selected-Klasse sofort verschwindet
-  if (state.tab === 'notizen') renderNotizen();
-  // Beschluss-Kontext auffrischen
-  if (state.selected) {
-    renderBeschlussNotizen(state.selected);
-    // Status-Buttons aus kommentare-Cache neu setzen
-    const komm = getKommentare();
-    const b = RAW.beschluesse.find(x => x.id === state.selected);
-    const currentStatus = komm[state.selected]?.status || (b?.beirat_relevant ? 'offen' : 'erledigt');
-    document.querySelectorAll('.status-btn').forEach(btn => btn.classList.remove('active'));
-    const statusMap = { 'offen': 's-offen', 'erledigt': 's-erledigt' };
-    document.querySelector(`.${statusMap[currentStatus]}`)?.classList.add('active');
-  }
-}
-
-async function saveNotiz() {
-  const hv     = document.getElementById('nf-hv').value.trim();
-  const objekt = document.getElementById('nf-objekt').value.trim();
-  const betreff= document.getElementById('nf-betreff').value.trim();
-  if (!hv)      { alert('Bitte Hausverwaltung wählen.'); return; }
-  if (!objekt)  { alert('Bitte Objekt wählen.'); return; }
-  if (!betreff) { alert('Bitte Betreff eingeben.'); return; }
-
-  const beschlussId = document.getElementById('nf-beschluss-id')?.value;
-  const id = notizEditId || ('n_' + Date.now());
-
-  const notizData = {
-    id,
-    datum:        toDisplayDate(document.getElementById('nf-datum').value.trim()),
-    hv,
-    objekt,
-    betreff,
-    text:         document.getElementById('nf-text').value,
-    status:       document.getElementById('nf-status').value || 'offen',
-    beschluss_id: beschlussId ? parseInt(beschlussId) : null,
-    gmail_links:  getGmailLinks(),
-  };
-
-  try {
-    const saved = await saveNotizAPI(notizData);
-    notizEditId = saved.id;
-  } catch(e) {
-    alert('Speichern fehlgeschlagen: ' + e);
-    return;
-  }
-
-  document.getElementById('notiz-delete-btn').style.display = 'inline-block';
-  document.getElementById('notiz-panel-title').textContent  = 'Notiz bearbeiten';
-  const note = document.getElementById('notiz-save-note');
-  note.style.opacity = '1';
-  setTimeout(() => note.style.opacity = '0', 2000);
-  updateNotizBadge();
-  renderNotizen();
-  if (state.selected) renderBeschlussNotizen(state.selected);
-}
-
-
-async function deleteNotiz() {
-  if (!notizEditId) return;
-  if (!confirm('Notiz wirklich löschen?')) return;
-  try {
-    await deleteNotizAPI(notizEditId);
-  } catch(e) {
-    alert('Löschen fehlgeschlagen: ' + e);
-    return;
-  }
-  notizEditId = null;
-  document.getElementById('detail-panel').classList.add('hidden');
-  hideNotizPanel();
-  updateNotizBadge();
-  renderNotizen();
-  if (state.selected) renderBeschlussNotizen(state.selected);
-}
-
-// ── Notiz-Status-Hilfsfunktionen ─────────────────────────────────────────────
-
-function _setNotizStatusToggle(st) {
-  const input = document.getElementById('nf-status');
-  const btn   = document.getElementById('nf-status-toggle');
-  if (!input || !btn) return;
-  input.value = st;
-  if (st === 'erledigt') {
-    btn.textContent = '● Erledigt';
-    btn.style.borderColor = 'var(--green)';
-    btn.style.color       = 'var(--green)';
-    btn.style.background  = 'rgba(80,192,112,0.1)';
-  } else {
-    btn.textContent = '○ Offen';
-    btn.style.borderColor = 'var(--accent)';
-    btn.style.color       = 'var(--accent)';
-    btn.style.background  = 'rgba(255,168,0,0.08)';
-  }
-}
-
-function toggleNotizFormStatus() {
-  const input = document.getElementById('nf-status');
-  _setNotizStatusToggle(input.value === 'offen' ? 'erledigt' : 'offen');
-}
-
-async function toggleNotizStatus(id, event) {
-  event.stopPropagation();
-  const n = getNotizen()[id];
-  if (!n) return;
-  const next = (n.status || 'offen') === 'offen' ? 'erledigt' : 'offen';
-  await saveNotizAPI({ ...n, status: next });
-  if (notizEditId === id) _setNotizStatusToggle(next);
-  renderNotizen();
-  if (state.selected) renderBeschlussNotizen(state.selected);
-}
-
-function renderNotizen() {
-  const container = document.getElementById('notizen-list');
-  if (!container) return;
-  const all = getNotizen();
-  const q   = state.search.toLowerCase();
-
-  let list = Object.values(all).sort((a,b) =>
-    (b.geaendert_am||'').localeCompare(a.geaendert_am||''));
-
-  // Filter
-  if (state.objekt) list = list.filter(n => n.objekt === state.objekt);
-  if (state.hv)     list = list.filter(n => n.hv === state.hv);
-  if (state.year)   list = list.filter(n => {
-    // Jahr aus Datum extrahieren (egal ob TT.MM.JJJJ oder JJJJ-MM-TT)
-    const notizYear = (n.datum||'').match(/\d{4}/)?.[0] || '';
-    if (notizYear === state.year) return true;
-    // auch treffen wenn verknüpfter Beschluss aus dem Filterjahr stammt
-    if (n.beschluss_id) {
-      const b = (RAW.beschluesse||[]).find(b => b.id == n.beschluss_id);
-      if (b) {
-        const parts = (b.dateiname||'').split('_');
-        const fileYear = parts.length >= 2 ? parts[1].substring(0,4) : '';
-        if (fileYear === state.year) return true;
-      }
-    }
-    return false;
-  });
-
-  // Status-Zähler aktualisieren (vor Status-Filter, damit beide Zahlen stimmen)
-  document.getElementById('cnt-offen').textContent    = list.filter(n => (n.status||'offen') === 'offen').length;
-  document.getElementById('cnt-erledigt').textContent = list.filter(n => (n.status||'offen') === 'erledigt').length;
-
-  if (state.status) list = list.filter(n => (n.status||'offen') === state.status);
-  if (q)            list = list.filter(n =>
-    fuzzySearchMatch(state.search, [n.betreff, n.text, n.datum, n.hv, n.objekt]));
-
-  if (!list.length) {
-    container.innerHTML = '<div class="empty">Keine Notizen vorhanden.</div>';
-    return;
-  }
-
-  const statusLabel = s => s === 'erledigt' ? '● Erledigt' : '○ Offen';
-  const statusColor = s => s === 'erledigt' ? 'var(--green)' : 'var(--accent)';
-  const shortHv = h => (h||'').replace(' Hausverwaltung GmbH','').replace(' GmbH','').replace(' / La Casa','');
-
-  container.innerHTML = list.map(n => {
-    const beschlussHint = n.beschluss_id
-      ? (() => { const b = RAW.beschluesse.find(x => x.id === n.beschluss_id);
-                 return b ? ` · TOP ${b.top_nr}` : ''; })()
-      : '';
-    const isSelected = (notizPanelOpen && notizEditId === n.id) ? ' selected' : '';
-    const st = n.status || 'offen';
-    return `
-      <div class="notiz-card${isSelected}" onclick="editNotiz('${n.id}')">
-        <div class="notiz-card-header">
-          <span class="notiz-betreff">${n.betreff||'(kein Betreff)'}</span>
-          <span class="notiz-datum">${n.datum||''}</span>
-        </div>
-        <div class="notiz-meta">${n.objekt} · ${shortHv(n.hv)}${beschlussHint}</div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
-          ${n.text ? `<div class="notiz-preview">${(n.text).substring(0,100)}${n.text.length>100?'…':''}</div>` : '<div></div>'}
-          <button onclick="toggleNotizStatus('${n.id}',event)" style="font-size:11px;color:${statusColor(st)};white-space:nowrap;margin-left:8px;background:none;border:1px solid ${statusColor(st)};border-radius:10px;padding:1px 8px;cursor:pointer;font-weight:600">${statusLabel(st)}</button>
-        </div>
-        ${(n.gmail_links||[]).map((l,i) => `<a class="notiz-gmail-btn" href="${l.url}" target="_blank" onclick="event.stopPropagation()">${l.label ? `✉ ${l.label}` : (i===0 && (n.gmail_links||[]).length===1 ? '✉ E-Mail öffnen' : `✉ Mail ${i+1}`)}</a>`).join('')}
-      </div>`;
-  }).join('');
-}
-
-// Notizen im Beschluss-Detail-Panel anzeigen
-function renderBeschlussNotizen(beschlussId) {
-  const container = document.getElementById('d-notizen-list');
-  if (!container) return;
-  const all = getNotizen();
-
-  // Notizen die direkt diesem Beschluss zugeordnet sind
-  const direct  = Object.values(all).filter(n => n.beschluss_id === beschlussId);
-  // Notizen zum gleichen Protokoll (Objekt + Datum) ohne direkten Beschluss-Bezug
-  const b = RAW.beschluesse.find(x => x.id === beschlussId);
-  const proto = b ? Object.values(all).filter(n =>
-    !n.beschluss_id && n.objekt === b.weg_objekt && n.datum === b.versammlungs_datum
-  ) : [];
-
-  const list = [...direct, ...proto];
-
-  if (!list.length) {
-    container.innerHTML = '<div class="linked-notiz-empty">Keine Notizen zu diesem Beschluss oder Protokoll.</div>';
-    return;
-  }
-
-  const shortHv = h => (h||'').replace(' Hausverwaltung GmbH','').replace(' GmbH','').replace(' / La Casa','');
-  container.innerHTML = list.map(n => `
-    <div class="linked-notiz-card" onclick="editNotiz('${n.id}'); switchTabDirect('notizen')">
-      <div class="linked-notiz-betreff">${n.betreff||'(kein Betreff)'}</div>
-      <div class="linked-notiz-meta">${n.datum||''} · ${shortHv(n.hv)}${n.beschluss_id ? ' · direkt verknüpft' : ' · Protokoll-Notiz'}</div>
-      ${n.text ? `<div class="linked-notiz-preview">${n.text.substring(0,120)}${n.text.length>120?'…':''}</div>` : ''}
-      ${(n.gmail_links||[]).length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">${(n.gmail_links||[]).map((l,i) => `<a class="notiz-gmail-btn" href="${l.url}" target="_blank" onclick="event.stopPropagation()">${l.label ? `✉ ${l.label}` : (i===0 && (n.gmail_links||[]).length===1 ? '✉ E-Mail öffnen' : `✉ Mail ${i+1}`)}</a>`).join('')}</div>` : ''}
-    </div>
-  `).join('');
-}
-
-// Neue Notiz mit Beschluss-Kontext vorausgefüllt
-function neueNotizFuerBeschluss() {
-  if (!state.selected) return;
-  const b = RAW.beschluesse.find(x => x.id === state.selected);
-  if (!b) return;
-  neueNotiz({
-    objekt: b.weg_objekt,
-    hv: b.hausverwaltung,
-    datum: b.versammlungs_datum,
-    beschluss_id: b.id,
-    betreff: `TOP ${b.top_nr}: ${(b.top_titel||'').substring(0,60)}`,
-  });
-}
-
-function switchTabDirect(tab) {
-  state.tab = tab;
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t => {
-    if ((t.getAttribute('onclick')||'').includes(`'${tab}'`)) t.classList.add('active');
-  });
-  document.getElementById('tab-beschluesse').style.display   = tab === 'beschluesse'   ? 'block' : 'none';
-  document.getElementById('tab-protokolle').style.display    = tab === 'protokolle'    ? 'block' : 'none';
-  document.getElementById('tab-beirat').style.display        = tab === 'beirat'        ? 'block' : 'none';
-  document.getElementById('tab-notizen').style.display       = tab === 'notizen'       ? 'block' : 'none';
-  document.getElementById('tab-belegpruefung').style.display = tab === 'belegpruefung' ? 'block' : 'none';
-  if (tab !== 'notizen')       hideNotizPanel();
-  if (tab !== 'belegpruefung') hideBelegPanel();
-  render();
-}
-
-// ── Tolerante Suche (OCR-Fehler, Umlaute, Leerzeichen) ───────────────────────
-
-function normalizeSearch(s) {
-  if (!s) return '';
-  s = s.toLowerCase();
-  s = s.replace(/ß/g, 'ss');
-  s = s.replace(/[äÄ]/g, 'ae').replace(/[öÖ]/g, 'oe').replace(/[üÜ]/g, 'ue');
-  s = s.replace(/\s+/g, ''); // Leerzeichen entfernen (OCR-Artefakte)
-  return s;
-}
-
-function levenshtein(a, b) {
-  if (a.length < b.length) { const t = a; a = b; b = t; }
-  if (!b.length) return a.length;
-  let prev = Array.from({length: b.length+1}, (_,i) => i);
-  for (const ca of a) {
-    const curr = [prev[0]+1];
-    for (let j = 0; j < b.length; j++) {
-      curr.push(Math.min(prev[j+1]+1, curr[j]+1, prev[j]+(ca!==b[j]?1:0)));
-    }
-    prev = curr;
-  }
-  return prev[b.length];
-}
-
-function fuzzyContains(query, text, threshold=0.82) {
-  if (!query || !text) return false;
-  const q = normalizeSearch(query);
-  const t = normalizeSearch(text);
-  if (!q) return true;
-  if (t.includes(q)) return true;          // exakter Treffer nach Normalisierung
-  if (q.length < 4) return t.includes(q); // kurze Queries nur exakt
-  // Sliding-Window Levenshtein mit variablen Fensterbreiten (±2)
-  // Nötig weil Umlaut-Normalisierung Längen verändert (ä→ae: +1 Zeichen)
-  let best = 0;
-  for (const w of [q.length, q.length-1, q.length+1, q.length-2, q.length+2]) {
-    if (w < 3 || w > t.length) continue;
-    for (let i = 0; i <= t.length - w; i++) {
-      const dist  = levenshtein(q, t.slice(i, i + w));
-      const ratio = 1 - dist / Math.max(q.length, 1);
-      if (ratio > best) best = ratio;
-      if (best >= 1.0) break;
-    }
-  }
-  return best >= threshold;
-}
-
-// Suche nach mehreren Wörtern: alle müssen matchen (AND-Logik)
-function fuzzySearchMatch(query, fields) {
-  const words = query.trim().split(/\s+/).filter(Boolean);
-  const haystack = fields.join(' ');
-  return words.every(w => fuzzyContains(w, haystack));
-}
-
-// ── Belegprüfung-System ──────────────────────────────────────────────────────
-
-let _belegCache = [];
-let belegEditId   = null;
-let belegPanelOpen = false;
-
-async function loadBelegpruefungenFromAPI() {
-  try {
-    const r = await fetch('/api/belegpruefungen');
-    _belegCache = await r.json();
-  } catch(e) {
-    console.error('Belegprüfungen laden fehlgeschlagen:', e);
-    _belegCache = [];
-  }
-}
-
-
-function fillBelegSelects(objekt, hv) {
-  const hvSel  = document.getElementById('bf-hv');
-  const objSel = document.getElementById('bf-objekt');
-  if (!hvSel || !objSel) return;
-  const hvs  = [...new Set(RAW.protokolle.map(p => p.hausverwaltung).filter(Boolean))].sort();
-  const objs = [...new Set(RAW.protokolle.map(p => p.weg_objekt).filter(Boolean))].sort();
-  const shortHv = h => h.replace(' Hausverwaltung GmbH','').replace(' GmbH','').replace(' / La Casa','');
-  hvSel.innerHTML  = '<option value="">– Hausverwaltung –</option>'
-    + hvs.map(h => `<option value="${h}">${shortHv(h)}</option>`).join('');
-  objSel.innerHTML = '<option value="">– Objekt –</option>'
-    + objs.map(o => `<option value="${o}">${o}</option>`).join('');
-  if (hv)     hvSel.value  = hv;
-  if (objekt) objSel.value = objekt;
-}
-
-function renderBelegDokumente(dokumente) {
-  const container = document.getElementById('bf-dok-list');
-  if (!container) return;
-  if (!dokumente || !dokumente.length) {
-    container.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:4px 0">Noch keine Dokumente hochgeladen.</div>';
-    return;
-  }
-  container.innerHTML = dokumente.map(d => {
-    const openBtn = d.link
-      ? `<a class="dok-open-btn" href="${_esc(d.link)}" target="_blank" onclick="event.stopPropagation()">↗ Öffnen</a>`
-      : `<span class="dok-open-btn disabled">↗ Öffnen</span>`;
-    return `
-      <div class="dok-row">
-        <span class="dok-name">📄 ${_esc(d.name||'')}</span>
-        ${openBtn}
-        <button class="dok-del-btn" onclick="removeBelegDokument(${d.id})" title="Entfernen">×</button>
-      </div>`;
-  }).join('');
-}
-
-function neueBelegpruefung() {
-  belegEditId = null;
-  fillBelegSelects('', '');
-  const today = new Date().toISOString().split('T')[0];
-  document.getElementById('bf-termin').value = today;
-  document.getElementById('bf-ort').value    = '';
-  document.getElementById('bf-notiz').value  = '';
-  document.getElementById('bf-dok-file').value = '';
-  renderBelegDokumente([]);
-  document.getElementById('beleg-panel-title').textContent = 'Neue Belegprüfung';
-  document.getElementById('beleg-delete-btn').style.display = 'none';
-  document.getElementById('beleg-save-note').style.opacity  = '0';
-  showBelegPanel();
-  renderBelegpruefungen();
-}
-
-function editBelegpruefung(id) {
-  const bp = _belegCache.find(b => b.id === id);
-  if (!bp) return;
-  belegEditId = id;
-  fillBelegSelects(bp.objekt, bp.hausverwaltung);
-  document.getElementById('bf-termin').value = toIsoDate(bp.termin || '');
-  document.getElementById('bf-ort').value    = bp.ort   || '';
-  document.getElementById('bf-notiz').value  = bp.notiz || '';
-  document.getElementById('bf-dok-file').value = '';
-  renderBelegDokumente(bp.dokumente || []);
-  document.getElementById('beleg-panel-title').textContent = 'Belegprüfung bearbeiten';
-  document.getElementById('beleg-delete-btn').style.display = 'inline-block';
-  document.getElementById('beleg-save-note').style.opacity  = '0';
-  showBelegPanel();
-  renderBelegpruefungen();
-}
-
-function showBelegPanel() {
-  document.getElementById('detail-panel').classList.remove('hidden');
-  document.querySelector('.detail-header').style.display = 'none';
-  document.querySelector('.detail-body').style.display   = 'none';
-  document.getElementById('notiz-detail').style.display  = 'none';
-  document.getElementById('beleg-detail').style.display  = 'block';
-  state.selected  = null;
-  belegPanelOpen  = true;
-  notizPanelOpen  = false;
-}
-
-function hideBelegPanel() {
-  const dh = document.querySelector('.detail-header');
-  const db = document.querySelector('.detail-body');
-  if (dh) dh.style.display = '';
-  if (db) db.style.display = '';
-  document.getElementById('beleg-detail').style.display = 'none';
-  belegEditId    = null;
-  belegPanelOpen = false;
-  if (state.tab === 'belegpruefung') renderBelegpruefungen();
-}
-
-async function saveBelegpruefung() {
-  const termin = document.getElementById('bf-termin').value.trim();
-  const objekt = document.getElementById('bf-objekt').value.trim();
-  const hv     = document.getElementById('bf-hv').value.trim();
-  const ort    = document.getElementById('bf-ort').value.trim();
-  const notiz  = document.getElementById('bf-notiz').value;
-
-  const data = { termin, objekt, hausverwaltung: hv, ort, notiz };
-  let saved;
-  try {
-    if (belegEditId) {
-      const r = await fetch(`/api/belegpruefungen/${belegEditId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      saved = await r.json();
-    } else {
-      const r = await fetch('/api/belegpruefungen', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      saved = await r.json();
-      belegEditId = saved.id;
-      document.getElementById('beleg-delete-btn').style.display = 'inline-block';
-      document.getElementById('beleg-panel-title').textContent  = 'Belegprüfung bearbeiten';
-    }
-    // Cache aktualisieren
-    const idx = _belegCache.findIndex(b => b.id === saved.id);
-    if (idx >= 0) {
-      saved.dokumente = _belegCache[idx].dokumente; // Dokumente aus lokalem Cache behalten
-      _belegCache[idx] = saved;
-    } else {
-      saved.dokumente = saved.dokumente || [];
-      _belegCache.unshift(saved);
-    }
-  } catch(e) {
-    alert('Speichern fehlgeschlagen: ' + e);
-    return;
-  }
-  const note = document.getElementById('beleg-save-note');
-  note.style.opacity = '1';
-  setTimeout(() => note.style.opacity = '0', 2000);
-  renderBelegpruefungen();
-}
-
-async function deleteBelegpruefung() {
-  if (!belegEditId) return;
-  if (!confirm('Belegprüfung und alle Dokumente wirklich löschen?')) return;
-  try {
-    await fetch(`/api/belegpruefungen/${belegEditId}`, { method: 'DELETE' });
-    _belegCache = _belegCache.filter(b => b.id !== belegEditId);
-  } catch(e) {
-    alert('Löschen fehlgeschlagen: ' + e);
-    return;
-  }
-  document.getElementById('detail-panel').classList.add('hidden');
-  hideBelegPanel();
-}
-
-async function uploadBelegDateien() {
-  const input = document.getElementById('bf-dok-file');
-  if (!input.files.length) { alert('Bitte zuerst eine Datei auswählen.'); return; }
-
-  // Noch nicht gespeichert → erst Belegprüfung anlegen
-  if (!belegEditId) {
-    await saveBelegpruefung();
-    if (!belegEditId) return;
-  }
-
-  const btn = document.querySelector('.dok-add-btn');
-  btn.disabled  = true;
-  btn.textContent = '⏳ Wird hochgeladen…';
-
-  for (const file of Array.from(input.files)) {
-    try {
-      const b64 = await new Promise((res, rej) => {
-        const reader = new FileReader();
-        reader.onload  = e => res(e.target.result.split(',')[1]);
-        reader.onerror = rej;
-        reader.readAsDataURL(file);
-      });
-      const r = await fetch(`/api/belegpruefungen/${belegEditId}/upload`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: file.name, data: b64 }),
-      });
-      const dok = await r.json();
-      const bp  = _belegCache.find(b => b.id === belegEditId);
-      if (bp) {
-        if (!bp.dokumente) bp.dokumente = [];
-        bp.dokumente.push(dok);
-        renderBelegDokumente(bp.dokumente);
-      }
-    } catch(e) {
-      alert(`Fehler bei „${file.name}": ${e}`);
-    }
-  }
-
-  input.value = '';
-  btn.disabled    = false;
-  btn.textContent = '📁 Hochladen';
-  renderBelegpruefungen();
-}
-
-async function removeBelegDokument(dokId) {
-  if (!confirm('Dokument wirklich entfernen?')) return;
-  try {
-    await fetch(`/api/belegpruefungen/${belegEditId}/dokumente/${dokId}`, { method: 'DELETE' });
-    const bp = _belegCache.find(b => b.id === belegEditId);
-    if (bp) {
-      bp.dokumente = (bp.dokumente || []).filter(d => d.id !== dokId);
-      renderBelegDokumente(bp.dokumente);
-    }
-    renderBelegpruefungen();
-  } catch(e) {
-    alert('Löschen fehlgeschlagen: ' + e);
-  }
-}
-
-async function openBelegOrdner() {
-  try {
-    const r = await fetch('/api/belegpruefung/open-folder');
-    if (!r.ok) {
-      const err = await r.json().catch(() => ({}));
-      alert('Fehler: ' + (err.error || r.status));
-    }
-  } catch(e) {
-    alert('Server nicht erreichbar – bitte Server neu starten.');
-  }
-}
-
-function renderBelegpruefungen() {
-  const container = document.getElementById('belegpruefung-list');
-  if (!container) return;
-
-  const list = [..._belegCache].sort((a,b) => (b.termin||'').localeCompare(a.termin||''));
-
-  if (!list.length) {
-    container.innerHTML = '<div class="empty">Noch keine Belegprüfungen erfasst.<br><span style="font-size:11px">Klicke auf „＋ Neue Belegprüfung" um den ersten Termin anzulegen.</span></div>';
-    return;
-  }
-
-  const shortHv = h => (h||'').replace(' Hausverwaltung GmbH','').replace(' GmbH','').replace(' / La Casa','');
-  container.innerHTML = list.map(bp => {
-    const isSelected = (belegPanelOpen && belegEditId === bp.id) ? ' selected' : '';
-    const dokCount   = (bp.dokumente || []).length;
-    return `
-      <div class="beleg-card${isSelected}" onclick="editBelegpruefung(${bp.id})">
-        <div class="beleg-card-header">
-          <span class="beleg-termin">${toDisplayDate(bp.termin||'')}</span>
-          <span class="beleg-objekt">${bp.objekt||'–'}</span>
-          ${dokCount ? `<span class="beleg-dok-count">📄 ${dokCount} Dokument${dokCount!==1?'e':''}</span>` : ''}
-        </div>
-        <div class="beleg-meta">${shortHv(bp.hausverwaltung||'')}${bp.ort ? ` · ${bp.ort}` : ''}</div>
-        ${bp.notiz ? `<div class="beleg-notiz-preview">${bp.notiz.substring(0,140)}${bp.notiz.length>140?'…':''}</div>` : ''}
-      </div>`;
-  }).join('');
-}
-
-// ── Manueller Editor (API-basiert) ───────────────────────────────────────────
-// Edits werden direkt in die DB geschrieben (beschluesse + beschluss_edits)
-// RAW.edits_meta = { [beschluss_id]: [felder] } für Badge-Anzeige
-
-// Effektive Felder (kein Merge mehr nötig, Edits stehen direkt in RAW)
-function effectiveB(b) { return b; }
-
-// ── Start ──────────────────────────────────────────────────────────────────────
-init();
-</script>
+<script src="weg_app.js"></script>
 </body>
 </html>
