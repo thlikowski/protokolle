@@ -758,6 +758,7 @@ class WEGHandler(BaseHTTPRequestHandler):
         if args and len(args) >= 2 and str(args[1]) not in ('200', '204'):
             print(f"  [{self.address_string()}] {fmt % args}")
 
+
     def send_json(self, data, status=200):
         body = json.dumps(data, ensure_ascii=False, default=str).encode('utf-8')
         self.send_response(status)
@@ -1208,7 +1209,7 @@ Beispiele:
     conn = get_conn(db_path)
     conn.close()
 
-    url = f"http://localhost:{args.port}"
+    url = f"http://127.0.0.1:{args.port}"
     print(f"")
     print(f"  WEG Server gestartet")
     print(f"  ────────────────────────────────────")
@@ -1223,7 +1224,16 @@ Beispiele:
         import threading
         threading.Timer(0.5, lambda: webbrowser.open(url)).start()
 
-    server = HTTPServer(('localhost', args.port), WEGHandler)
+    class QuietHTTPServer(HTTPServer):
+        """HTTPServer ohne ConnectionReset-Spam im Terminal."""
+        def handle_error(self, request, client_address):
+            import sys
+            exc = sys.exc_info()[1]
+            if isinstance(exc, (ConnectionResetError, BrokenPipeError)):
+                return  # Browser hat Verbindung getrennt – normal, ignorieren
+            super().handle_error(request, client_address)
+
+    server = QuietHTTPServer(('127.0.0.1', args.port), WEGHandler)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
